@@ -1,0 +1,7 @@
+{
+  "Patient": {
+    "hospitalpatientnumber": "id",
+    "custompatientid": "id",
+    "specialfield": "identifier"
+  }
+}

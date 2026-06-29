@@ -1,0 +1,62 @@
+{
+  "MedicationRequest": {
+    "patientid": "subject",
+    "patient_id": "subject",
+    "pid": "subject",
+
+    "medication": "medicationCodeableConcept",
+    "medicationname": "medicationCodeableConcept",
+    "medication_name": "medicationCodeableConcept",
+    "drug": "medicationCodeableConcept",
+    "drugname": "medicationCodeableConcept",
+    "drug_name": "medicationCodeableConcept",
+    "medicine": "medicationCodeableConcept",
+
+    "status": "status",
+    "medicationstatus": "status",
+    "rxstatus": "status",
+
+    "intent": "intent",
+    "ordertype": "intent",
+    "order_type": "intent",
+
+    "dose": "dosageInstruction.dose",
+    "dosage": "dosageInstruction.dose",
+    "doseamount": "dosageInstruction.dose",
+    "dose_amount": "dosageInstruction.dose",
+
+    "unit": "dosageInstruction.unit",
+    "doseunit": "dosageInstruction.unit",
+    "dose_unit": "dosageInstruction.unit",
+
+    "frequency": "dosageInstruction.frequency",
+    "freq": "dosageInstruction.frequency",
+    "dosagefrequency": "dosageInstruction.frequency",
+
+    "route": "dosageInstruction.route",
+    "routeofadministration": "dosageInstruction.route",
+    "route_of_administration": "dosageInstruction.route",
+
+    "startdate": "dispenseRequest.start",
+    "start_date": "dispenseRequest.start",
+    "prescriptiondate": "dispenseRequest.start",
+
+    "enddate": "dispenseRequest.end",
+    "end_date": "dispenseRequest.end",
+    "expirydate": "dispenseRequest.end",
+
+    "quantity": "dispenseRequest.quantity",
+    "dispenseamount": "dispenseRequest.quantity",
+    "refills": "dispenseRequest.numberOfRepeatsAllowed",
+
+    "note": "note",
+    "notes": "note",
+    "instructions": "note",
+    "sig": "note",
+
+    "prescriber": "requester",
+    "doctor": "requester",
+    "physician": "requester",
+    "orderedby": "requester"
+  }
+}

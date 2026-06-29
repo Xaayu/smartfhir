@@ -1,0 +1,55 @@
+{
+  "Encounter": {
+    "patientid": "subject",
+    "patient_id": "subject",
+    "pid": "subject",
+
+    "status": "status",
+    "encounterstatus": "status",
+    "visitstatus": "status",
+
+    "class": "class",
+    "encounterclass": "class",
+    "visittype": "class",
+    "visitclass": "class",
+
+    "type": "type",
+    "encountertype": "type",
+    "visitreason": "type",
+
+    "startdate": "period.start",
+    "start_date": "period.start",
+    "admissiondate": "period.start",
+    "admission_date": "period.start",
+    "visitstart": "period.start",
+    "visitdate": "period.start",
+
+    "enddate": "period.end",
+    "end_date": "period.end",
+    "dischargedate": "period.end",
+    "discharge_date": "period.end",
+    "visitend": "period.end",
+
+    "reason": "reasonCode",
+    "reasoncode": "reasonCode",
+    "diagnosis": "reasonCode",
+    "chiefcomplaint": "reasonCode",
+    "chief_complaint": "reasonCode",
+
+    "priority": "priority",
+    "urgency": "priority",
+
+    "location": "location",
+    "ward": "location",
+    "department": "location",
+
+    "practitioner": "participant",
+    "doctor": "participant",
+    "physician": "participant",
+    "provider": "participant",
+
+    "note": "note",
+    "notes": "note",
+    "comment": "note"
+  }
+}

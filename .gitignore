@@ -1,0 +1,33 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / React
+node_modules/
+build/
+dist/
+coverage/
+.npm/
+
+# Local runtime stores and caches
+backend/store/*.json
+store/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+frontend/smartfhir-ui/.npm-cache/
+.npm-cache/

@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+fhir.resources
+google-generativeai
+google-genai
+python-dotenv
+pydantic
+psycopg[binary]
+python-jose[cryptography]
+passlib[bcrypt]
+PyJWT
+httpx
+requests
+authlib

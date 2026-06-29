@@ -1,0 +1,71 @@
+{
+  "Patient": {
+    "patientid": "id",
+    "patient_id": "id",
+    "ptid": "id",
+    "pid": "id",
+    "pt_id": "id",
+
+    "name": "name",
+    "fullname": "name",
+    "full_name": "name",
+    "patientname": "name",
+    "patient_name": "name",
+
+    "sex": "gender",
+    "Sex": "gender",
+    "SEX": "gender",
+    "patient_sex": "gender",
+
+    "dob": "birthDate",
+    "DOB": "birthDate",
+    "dateofbirth": "birthDate",
+    "date_of_birth": "birthDate",
+    "birthdate": "birthDate",
+    "birth_date": "birthDate",
+
+    "phone": "telecom",
+    "phonenumber": "telecom",
+    "phone_number": "telecom",
+    "mobile": "telecom",
+    "contact": "telecom",
+
+    "address": "address",
+    "addr": "address",
+    "patient_address": "address",
+
+    "city": "address.city",
+    "state": "address.state",
+    "zip": "address.postalCode",
+    "zipcode": "address.postalCode",
+    "postal_code": "address.postalCode",
+    "country": "address.country",
+
+    "firstname": "name.given",
+    "first_name": "name.given",
+    "fname": "name.given",
+    "givenname": "name.given",
+
+    "lastname": "name.family",
+    "last_name": "name.family",
+    "lname": "name.family",
+    "familyname": "name.family",
+    "surname": "name.family",
+
+    "maritalstatus": "maritalStatus",
+    "marital_status": "maritalStatus",
+    "marital": "maritalStatus",
+
+    "language": "communication.language",
+    "preflang": "communication.language",
+    "preferred_language": "communication.language",
+
+    "deceased": "deceasedBoolean",
+    "isdead": "deceasedBoolean",
+    "is_deceased": "deceasedBoolean",
+
+    "email": "telecom.email",
+    "emailaddress": "telecom.email",
+    "email_address": "telecom.email"
+  }
+}

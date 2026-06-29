@@ -1,0 +1,62 @@
+{
+  "Observation": {
+    "testname": "code.display",
+    "test_name": "code.display",
+    "observationname": "code.display",
+    "observation_name": "code.display",
+    "testtype": "code.display",
+
+    "value": "valueQuantity.value",
+    "result": "valueQuantity.value",
+    "testresult": "valueQuantity.value",
+    "test_result": "valueQuantity.value",
+    "resultvalue": "valueQuantity.value",
+
+    "unit": "valueQuantity.unit",
+    "units": "valueQuantity.unit",
+    "uom": "valueQuantity.unit",
+    "measure": "valueQuantity.unit",
+
+    "status": "status",
+    "observationstatus": "status",
+    "teststatus": "status",
+
+    "patientid": "subject",
+    "patient_id": "subject",
+    "pid": "subject",
+    "subjectid": "subject",
+    "subject_id": "subject",
+
+    "date": "effectiveDateTime",
+    "testdate": "effectiveDateTime",
+    "test_date": "effectiveDateTime",
+    "observationdate": "effectiveDateTime",
+    "resultdate": "effectiveDateTime",
+    "datetime": "effectiveDateTime",
+
+    "category": "category",
+    "obstype": "category",
+    "obs_type": "category",
+    "observationtype": "category",
+
+    "note": "note",
+    "notes": "note",
+    "comment": "note",
+    "comments": "note",
+
+    "interpretation": "interpretation",
+    "flag": "interpretation",
+    "abnormalflag": "interpretation",
+    "abnormal_flag": "interpretation",
+
+    "referencehigh": "referenceRange.high",
+    "reference_high": "referenceRange.high",
+    "normalrangehigh": "referenceRange.high",
+    "high": "referenceRange.high",
+
+    "referencelow": "referenceRange.low",
+    "reference_low": "referenceRange.low",
+    "normalrangelow": "referenceRange.low",
+    "low": "referenceRange.low"
+  }
+}

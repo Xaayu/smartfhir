@@ -1,0 +1,58 @@
+{
+  "Condition": {
+    "patientid": "subject",
+    "patient_id": "subject",
+    "pid": "subject",
+    "subjectid": "subject",
+
+    "diagnosis": "code.display",
+    "condition": "code.display",
+    "problem": "code.display",
+    "disease": "code.display",
+    "disorder": "code.display",
+    "conditionname": "code.display",
+    "diagnosisname": "code.display",
+
+    "status": "clinicalStatus",
+    "clinicalstatus": "clinicalStatus",
+    "clinical_status": "clinicalStatus",
+    "conditionstatus": "clinicalStatus",
+
+    "verificationstatus": "verificationStatus",
+    "verification_status": "verificationStatus",
+    "verified": "verificationStatus",
+    "confirmation": "verificationStatus",
+
+    "severity": "severity",
+    "conditionseverity": "severity",
+    "seriousness": "severity",
+
+    "onsetdate": "onsetDateTime",
+    "onset_date": "onsetDateTime",
+    "onset": "onsetDateTime",
+    "startdate": "onsetDateTime",
+    "start_date": "onsetDateTime",
+    "diagnosisdate": "onsetDateTime",
+
+    "recordeddate": "recordedDate",
+    "recorded_date": "recordedDate",
+    "recorddate": "recordedDate",
+    "notedate": "recordedDate",
+
+    "note": "note",
+    "notes": "note",
+    "comment": "note",
+    "comments": "note",
+
+    "category": "category",
+    "conditiontype": "category",
+    "problemtype": "category",
+
+    "abatementdate": "abatementDateTime",
+    "abatement_date": "abatementDateTime",
+    "enddate": "abatementDateTime",
+    "end_date": "abatementDateTime",
+    "resolveddate": "abatementDateTime",
+    "resolved_date": "abatementDateTime"
+  }
+}
