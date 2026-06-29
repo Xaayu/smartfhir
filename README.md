@@ -68,3 +68,4 @@ The frontend expects the backend at `http://localhost:8000`.
 
 - Do not commit `.env`, `node_modules`, build output, Python caches, or runtime JSON stores.
 - `backend/store/` is kept with `.gitkeep`; JSON files are generated locally at runtime.
+
