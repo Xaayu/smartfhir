@@ -3,7 +3,7 @@
 ## Overview
 - **Frontend**: Vercel
 - **Backend**: Render
-- **Database**: Supabase (already configured)
+- **Storage**: Local file storage (no database required)
 
 ---
 
@@ -43,7 +43,6 @@
 ### Prerequisites
 - Render account
 - GitHub repository with backend code
-- Supabase database URL
 - API keys (Google, OpenAI, JWT secret)
 
 ### Steps
@@ -68,7 +67,7 @@
      - **Build Command**: `pip install -r requirements.txt`
      - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
    - Add Environment Variables:
-     - `SUPABASE_DB_URL`: Your Supabase connection string
+     - `USE_POSTGRES`: `false` (uses local file storage)
      - `GOOGLE_API_KEY`: Your Google AI API key
      - `JWT_SECRET`: Your JWT secret key
      - `OPENAI_API_KEY`: Your OpenAI API key (if using)
@@ -88,23 +87,26 @@ REACT_APP_API_BASE_URL=https://smartfhir-backend.onrender.com
 ```
 
 ### Backend (Render Environment Variables)
-- `SUPABASE_DB_URL`: `postgresql://postgres:password@your-project.supabase.co:5432/postgres`
+- `USE_POSTGRES`: `false` (uses local file storage for API keys and feedback)
 - `GOOGLE_API_KEY`: Your Google AI Studio API key
 - `JWT_SECRET`: Generate a secure random string
 - `OPENAI_API_KEY`: Your OpenAI API key (optional)
 
 ---
 
-## 4. Supabase Setup (Already Done)
+## 4. Storage
 
-Your Supabase database should already have:
-- `users` table
-- `auth_tokens` table
-- `oauth_providers` table
-- `auth_audit_log` table
-- `api_users` table
-- `api_usage` table
-- `feedback_submissions` table
+The application uses local file storage for:
+- API keys: `backend/store/keys.json`
+- API usage: `backend/store/usage.jsonl`
+- Feedback: `backend/store/feedback.json`
+- Patients: `backend/store/patients.json`
+- Observations: `backend/store/observations.json`
+
+**Note**: Render's ephemeral filesystem means data will be reset on each deployment. For production persistence, consider:
+- Using Render Disk (paid feature)
+- Migrating to Supabase PostgreSQL
+- Using external object storage (S3, etc.)
 
 ---
 
@@ -135,16 +137,16 @@ Should return:
 ### Backend Issues
 - Check Render logs for errors
 - Verify environment variables are set correctly
-- Ensure Supabase connection string is valid
+- Ensure `USE_POSTGRES=false` is set
 
 ### Frontend Issues
 - Check Vercel deployment logs
 - Verify `REACT_APP_API_BASE_URL` is set correctly
 - Check browser console for CORS errors
 
-### Database Issues
-- Run SQL schema in Supabase SQL Editor if tables are missing
-- Check Supabase connection string format
+### Data Persistence Issues
+- If data is lost after deployments, consider using Render Disk or migrating to Supabase
+- Check that `store/` directory is being created and written to
 
 ---
 
@@ -154,3 +156,4 @@ Should return:
 - Set up error monitoring (optional)
 - Configure custom domains (optional)
 - Set up CI/CD pipelines (optional)
+- Consider migrating to Supabase for production persistence

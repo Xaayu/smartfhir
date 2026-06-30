@@ -22,6 +22,7 @@ def get_db_connection():
 
 def init_database():
     """Initialize the database with required tables (if not already created)"""
+    conn = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()

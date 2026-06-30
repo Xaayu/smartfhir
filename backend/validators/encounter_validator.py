@@ -311,10 +311,12 @@ def build_encounter_resource(data: dict) -> dict:
 
     # Period
     period = {}
-    if get_nested_value(data, "period.start"):
-        period["start"] = fix_date(data["period.start"])
-    if get_nested_value(data, "period.end"):
-        period["end"] = fix_date(data["period.end"])
+    start_value = get_nested_value(data, "period.start")
+    if start_value:
+        period["start"] = fix_date(start_value)
+    end_value = get_nested_value(data, "period.end")
+    if end_value:
+        period["end"] = fix_date(end_value)
     if period:
         resource["period"] = period
 

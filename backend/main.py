@@ -75,14 +75,7 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on application startup"""
-    try:
-        init_database()
-    except Exception as e:
-        print(f"⚠️ Database initialization skipped (might be first run): {str(e)}")
-    try:
-        ensure_feedback_table()
-    except Exception as e:
-        print(f"Feedback table initialization skipped: {str(e)}")
+    print("📁 Using local file storage (PostgreSQL disabled)")
 
 # Note: OAuth routes removed for simplified email-only flow
 
