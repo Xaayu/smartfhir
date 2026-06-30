@@ -156,9 +156,11 @@ const styles = `
     color: #E2E8F0;
     border-radius: 10px;
     padding: 14px 16px;
-    font-size: 15px;
+    font-size: 16px;
     outline: none;
     margin-bottom: 14px;
+    -webkit-appearance: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .key-input:focus {
@@ -173,13 +175,16 @@ const styles = `
     color: #fff;
     border-radius: 10px;
     padding: 14px 16px;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 800;
     cursor: pointer;
     transition: transform 0.18s, background 0.18s, opacity 0.18s;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 50px;
   }
 
   .key-button:hover { background: #6B9EF8; transform: translateY(-1px); }
+  .key-button:active { transform: translateY(0); }
   .key-button:disabled { cursor: wait; opacity: 0.7; transform: none; }
 
   .key-error {
@@ -239,6 +244,87 @@ const styles = `
     .key-brand { margin-bottom: 40px; }
     .benefit-grid { grid-template-columns: 1fr; }
     .key-form-wrap { align-self: stretch; }
+  }
+
+  @media (max-width: 480px) {
+    .key-page {
+      padding: 20px 16px 32px;
+      gap: 28px;
+    }
+
+    .key-brand {
+      margin-bottom: 32px;
+      font-size: 16px;
+    }
+
+    .key-logo {
+      width: 28px;
+      height: 28px;
+      font-size: 14px;
+    }
+
+    .key-title {
+      font-size: 28px;
+      margin-bottom: 18px;
+    }
+
+    .key-copy {
+      font-size: 16px;
+      margin-bottom: 32px;
+    }
+
+    .benefit {
+      padding: 14px;
+    }
+
+    .benefit-mark {
+      width: 24px;
+      height: 24px;
+      font-size: 12px;
+    }
+
+    .benefit-title {
+      font-size: 13px;
+    }
+
+    .benefit-desc {
+      font-size: 12px;
+    }
+
+    .key-form-wrap {
+      padding: 24px 20px;
+      border-radius: 12px;
+    }
+
+    .key-form-title {
+      font-size: 20px;
+    }
+
+    .key-form-sub {
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .key-input {
+      padding: 12px 14px;
+      font-size: 16px;
+    }
+
+    .key-button {
+      padding: 12px 14px;
+      font-size: 15px;
+    }
+
+    .key-message,
+    .key-error {
+      font-size: 13px;
+    }
+
+    .key-snippet {
+      font-size: 11px;
+      padding: 12px;
+      overflow-x: auto;
+    }
   }
 `;
 

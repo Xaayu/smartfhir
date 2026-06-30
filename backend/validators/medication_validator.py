@@ -101,13 +101,32 @@ def validate_medication(data: dict) -> dict:
         })
         rxnorm_result = {"found": False, "code": None, "display": None, "system": None, "source": "none"}
     else:
-        rxnorm_result = lookup_rxnorm(str(medication_name))
-        if not rxnorm_result.get("found"):
-            warnings.append({
-                "field": "medicationCodeableConcept",
-                "message": f"Could not resolve RxNorm code for '{medication_name}'.",
-                "suggestion": "Verify medication name or provide a standard RxNorm identifier."
-            })
+        # Handle both string and CodeableConcept dict formats
+        medication_str = None
+        if isinstance(medication_name, str):
+            medication_str = medication_name
+        elif isinstance(medication_name, dict):
+            # If already a proper FHIR CodeableConcept with coding, use as-is
+            if "coding" in medication_name:
+                # Extract text for lookup
+                medication_str = medication_name.get("text")
+                if not medication_str:
+                    coding = medication_name.get("coding", [])
+                    if isinstance(coding, list) and coding:
+                        medication_str = coding[0].get("display")
+            else:
+                medication_str = medication_name.get("text") or medication_name.get("display")
+        
+        if medication_str:
+            rxnorm_result = lookup_rxnorm(str(medication_str))
+            if not rxnorm_result.get("found"):
+                warnings.append({
+                    "field": "medicationCodeableConcept",
+                    "message": f"Could not resolve RxNorm code for '{medication_str}'.",
+                    "suggestion": "Verify medication name or provide a standard RxNorm identifier."
+                })
+        else:
+            rxnorm_result = {"found": False, "code": None, "display": None, "system": None, "source": "none"}
 
     subject = normalize_patient_reference(data.get("subject"))
     if not subject:
@@ -149,7 +168,7 @@ def validate_medication(data: dict) -> dict:
             "explanation": "MedicationRequest requires a status value.",
             "suggested_fix": "Add status e.g. 'active', 'on-hold', or 'completed'."
         })
-    else:
+    elif isinstance(status, str):
         normalized_status = status.lower().strip()
         if normalized_status not in VALID_STATUSES:
             fix = STATUS_FIXES.get(normalized_status)
@@ -162,6 +181,7 @@ def validate_medication(data: dict) -> dict:
                 "explanation": f"FHIR accepts: {', '.join(VALID_STATUSES)}.",
                 "suggested_fix": f"Change to '{fix}'" if fix else "Use a valid MedicationRequest status."
             })
+    # If status is a dict (CodeableConcept), skip validation - it's already in FHIR format
 
     intent = data.get("intent")
     if not intent:
@@ -174,7 +194,7 @@ def validate_medication(data: dict) -> dict:
             "explanation": "MedicationRequest should include an intent (e.g., 'order').",
             "suggested_fix": "Add intent such as 'order' or 'plan'."
         })
-    else:
+    elif isinstance(intent, str):
         normalized_intent = intent.lower().strip()
         if normalized_intent not in VALID_INTENTS:
             fix = INTENT_FIXES.get(normalized_intent)
@@ -187,6 +207,7 @@ def validate_medication(data: dict) -> dict:
                 "explanation": f"Valid intents: {', '.join(VALID_INTENTS)}.",
                 "suggested_fix": f"Change to '{fix}'" if fix else "Use a valid intent value."
             })
+    # If intent is a dict (CodeableConcept), skip validation - it's already in FHIR format
 
     for field in ["dispenseRequest.start", "dispenseRequest.end"]:
         value = data.get(field)
@@ -278,12 +299,32 @@ def build_medication_resource(data: dict, rxnorm_result: dict | None = None) -> 
         resource["id"] = data["id"]
 
     status = data.get("status") or "active"
-    normalized_status = status.lower().strip()
-    resource["status"] = STATUS_FIXES.get(normalized_status, normalized_status if normalized_status in VALID_STATUSES else "active")
+    if isinstance(status, str):
+        normalized_status = status.lower().strip()
+        resource["status"] = STATUS_FIXES.get(normalized_status, normalized_status if normalized_status in VALID_STATUSES else "active")
+    elif isinstance(status, dict) and "coding" in status:
+        # Already a proper FHIR CodeableConcept
+        resource["status"] = status
+    else:
+        # Dict without coding - try to extract
+        status_str = status.get("code") or status.get("text")
+        if status_str:
+            normalized_status = str(status_str).lower().strip()
+            resource["status"] = STATUS_FIXES.get(normalized_status, normalized_status if normalized_status in VALID_STATUSES else "active")
 
     intent = data.get("intent") or "order"
-    normalized_intent = intent.lower().strip()
-    resource["intent"] = normalized_intent if normalized_intent in VALID_INTENTS else INTENT_FIXES.get(normalized_intent, "order")
+    if isinstance(intent, str):
+        normalized_intent = intent.lower().strip()
+        resource["intent"] = normalized_intent if normalized_intent in VALID_INTENTS else INTENT_FIXES.get(normalized_intent, "order")
+    elif isinstance(intent, dict) and "coding" in intent:
+        # Already a proper FHIR CodeableConcept
+        resource["intent"] = intent
+    else:
+        # Dict without coding - try to extract
+        intent_str = intent.get("code") or intent.get("text")
+        if intent_str:
+            normalized_intent = str(intent_str).lower().strip()
+            resource["intent"] = normalized_intent if normalized_intent in VALID_INTENTS else INTENT_FIXES.get(normalized_intent, "order")
 
     subject = normalize_patient_reference(data.get("subject"))
     if subject:
@@ -291,57 +332,112 @@ def build_medication_resource(data: dict, rxnorm_result: dict | None = None) -> 
 
     medication_name = data.get("medicationCodeableConcept") or data.get("medication")
     if medication_name:
-        if rxnorm_result and rxnorm_result.get("found"):
+        if isinstance(medication_name, dict) and "coding" in medication_name:
+            # Already a proper FHIR CodeableConcept
+            resource["medicationCodeableConcept"] = medication_name
+        elif isinstance(medication_name, dict):
+            # Dict without coding - convert to text
             resource["medicationCodeableConcept"] = {
-                "coding": [{
-                    "system": rxnorm_result.get("system"),
-                    "code": rxnorm_result.get("code"),
-                    "display": rxnorm_result.get("display")
-                }],
-                "text": str(medication_name)
+                "text": str(medication_name.get("text") or medication_name.get("display", "Unknown"))
             }
-        else:
-            resource["medicationCodeableConcept"] = {
-                "text": str(medication_name)
-            }
+        elif isinstance(medication_name, str):
+            if rxnorm_result and rxnorm_result.get("found"):
+                resource["medicationCodeableConcept"] = {
+                    "coding": [{
+                        "system": rxnorm_result.get("system"),
+                        "code": rxnorm_result.get("code"),
+                        "display": rxnorm_result.get("display")
+                    }],
+                    "text": str(medication_name)
+                }
+            else:
+                resource["medicationCodeableConcept"] = {
+                    "text": str(medication_name)
+                }
 
-    dosage = {}
-    dose_and_rate = {}
-    if get_nested_value(data, "dosageInstruction.dose") is not None:
-        dose_value = get_nested_value(data, "dosageInstruction.dose")
-        # Convert string numbers to float/int
-        try:
-            dose_value = float(dose_value) if isinstance(dose_value, str) else dose_value
-        except (ValueError, TypeError):
-            pass
-        dose_and_rate["doseQuantity"] = {"value": dose_value}
-    if get_nested_value(data, "dosageInstruction.unit"):
-        dose_and_rate.setdefault("doseQuantity", {})["unit"] = get_nested_value(data, "dosageInstruction.unit")
-    if dose_and_rate:
-        dosage["doseAndRate"] = [dose_and_rate]
-    if get_nested_value(data, "dosageInstruction.route"):
-        dosage["route"] = {"text": get_nested_value(data, "dosageInstruction.route")}
-    if get_nested_value(data, "dosageInstruction.frequency"):
-        dosage["text"] = get_nested_value(data, "dosageInstruction.frequency")
+    dosage = data.get("dosageInstruction")
     if dosage:
-        resource["dosageInstruction"] = [dosage]
-
-    dispense = {}
-    if get_nested_value(data, "dispenseRequest.quantity") is not None:
-        quantity_value = get_nested_value(data, "dispenseRequest.quantity")
-        dispense["quantity"] = {"value": quantity_value}
+        if isinstance(dosage, list):
+            if dosage and isinstance(dosage[0], dict):
+                # Already proper FHIR format
+                resource["dosageInstruction"] = dosage
+            else:
+                # Array of strings - convert
+                resource["dosageInstruction"] = [{"text": str(d)} for d in dosage]
+        elif isinstance(dosage, dict):
+            # Single dict - check if it's proper FHIR format
+            if "doseAndRate" in dosage or "route" in dosage or "timing" in dosage:
+                resource["dosageInstruction"] = [dosage]
+            else:
+                # Simple dict - convert to text
+                resource["dosageInstruction"] = [{"text": str(dosage)}]
+        else:
+            # String
+            resource["dosageInstruction"] = [{"text": str(dosage)}]
+    else:
+        # Build from nested flat fields
+        dosage = {}
+        dose_and_rate = {}
+        if get_nested_value(data, "dosageInstruction.dose") is not None:
+            dose_value = get_nested_value(data, "dosageInstruction.dose")
+            # Convert string numbers to float/int
+            try:
+                dose_value = float(dose_value) if isinstance(dose_value, str) else dose_value
+            except (ValueError, TypeError):
+                pass
+            dose_and_rate["doseQuantity"] = {"value": dose_value}
         if get_nested_value(data, "dosageInstruction.unit"):
-            dispense["quantity"]["unit"] = get_nested_value(data, "dosageInstruction.unit")
-    if get_nested_value(data, "dispenseRequest.start"):
-        dispense["validityPeriod"] = dispense.get("validityPeriod", {})
-        dispense["validityPeriod"]["start"] = fix_date(get_nested_value(data, "dispenseRequest.start"))
-    if get_nested_value(data, "dispenseRequest.end"):
-        dispense["validityPeriod"] = dispense.get("validityPeriod", {})
-        dispense["validityPeriod"]["end"] = fix_date(get_nested_value(data, "dispenseRequest.end"))
-    if get_nested_value(data, "dispenseRequest.numberOfRepeatsAllowed") is not None:
-        dispense["numberOfRepeatsAllowed"] = get_nested_value(data, "dispenseRequest.numberOfRepeatsAllowed")
+            dose_and_rate.setdefault("doseQuantity", {})["unit"] = get_nested_value(data, "dosageInstruction.unit")
+        if dose_and_rate:
+            dosage["doseAndRate"] = [dose_and_rate]
+        if get_nested_value(data, "dosageInstruction.route"):
+            dosage["route"] = {"text": get_nested_value(data, "dosageInstruction.route")}
+        if get_nested_value(data, "dosageInstruction.frequency"):
+            dosage["text"] = get_nested_value(data, "dosageInstruction.frequency")
+        if dosage:
+            resource["dosageInstruction"] = [dosage]
+
+    dispense = data.get("dispenseRequest")
     if dispense:
-        resource["dispenseRequest"] = dispense
+        if isinstance(dispense, dict) and ("quantity" in dispense or "validityPeriod" in dispense or "numberOfRepeatsAllowed" in dispense):
+            # Already proper FHIR format
+            resource["dispenseRequest"] = dispense
+        else:
+            # Build from nested flat fields
+            dispense_obj = {}
+            if get_nested_value(data, "dispenseRequest.quantity") is not None:
+                quantity_value = get_nested_value(data, "dispenseRequest.quantity")
+                dispense_obj["quantity"] = {"value": quantity_value}
+                if get_nested_value(data, "dosageInstruction.unit"):
+                    dispense_obj["quantity"]["unit"] = get_nested_value(data, "dosageInstruction.unit")
+            if get_nested_value(data, "dispenseRequest.start"):
+                dispense_obj["validityPeriod"] = dispense_obj.get("validityPeriod", {})
+                dispense_obj["validityPeriod"]["start"] = fix_date(get_nested_value(data, "dispenseRequest.start"))
+            if get_nested_value(data, "dispenseRequest.end"):
+                dispense_obj["validityPeriod"] = dispense_obj.get("validityPeriod", {})
+                dispense_obj["validityPeriod"]["end"] = fix_date(get_nested_value(data, "dispenseRequest.end"))
+            if get_nested_value(data, "dispenseRequest.numberOfRepeatsAllowed") is not None:
+                dispense_obj["numberOfRepeatsAllowed"] = get_nested_value(data, "dispenseRequest.numberOfRepeatsAllowed")
+            if dispense_obj:
+                resource["dispenseRequest"] = dispense_obj
+    else:
+        # Build from nested flat fields
+        dispense = {}
+        if get_nested_value(data, "dispenseRequest.quantity") is not None:
+            quantity_value = get_nested_value(data, "dispenseRequest.quantity")
+            dispense["quantity"] = {"value": quantity_value}
+            if get_nested_value(data, "dosageInstruction.unit"):
+                dispense["quantity"]["unit"] = get_nested_value(data, "dosageInstruction.unit")
+        if get_nested_value(data, "dispenseRequest.start"):
+            dispense["validityPeriod"] = dispense.get("validityPeriod", {})
+            dispense["validityPeriod"]["start"] = fix_date(get_nested_value(data, "dispenseRequest.start"))
+        if get_nested_value(data, "dispenseRequest.end"):
+            dispense["validityPeriod"] = dispense.get("validityPeriod", {})
+            dispense["validityPeriod"]["end"] = fix_date(get_nested_value(data, "dispenseRequest.end"))
+        if get_nested_value(data, "dispenseRequest.numberOfRepeatsAllowed") is not None:
+            dispense["numberOfRepeatsAllowed"] = get_nested_value(data, "dispenseRequest.numberOfRepeatsAllowed")
+        if dispense:
+            resource["dispenseRequest"] = dispense
 
     if data.get("note"):
         resource["note"] = [{"text": data.get("note")}]

@@ -40,10 +40,6 @@ from validators.condition_validator import (
     validate_condition,
     build_condition_resource
 )
-from validators.condition_validator import (
-    validate_condition,
-    build_condition_resource
-)
 from validators.encounter_validator import (
     CONDITIONS_STORE,
     validate_encounter,
@@ -54,6 +50,8 @@ from validators.medication_validator import (
     validate_medication,
     build_medication_resource
 )
+
+from hl7_converter import convert_hl7_to_fhir
 
 
 # 2. Store manager functions (ADD HERE)
@@ -67,7 +65,7 @@ MAX_API_KEY_REQUESTS_PER_IP = 10
 
 app = FastAPI(
     title="MedTechTools",
-    description="AI-Powered FHIR Validation, Explanation & Auto-Fix",
+    description="AI-Powered FHIR Validation, Explanation, Auto-Fix & HL7 v2 Conversion",
     version="1.0.0"
 )
 
@@ -112,6 +110,7 @@ EXEMPT_PATHS = {
     "/admin/metrics",
     "/admin/feedback",
     "/admin/delete-user",
+    "/api/hl7-to-fhir",
     # OAuth endpoints removed; simplified email registration used instead
 }
 
@@ -505,7 +504,8 @@ def root():
             "POST /autofix",
             "POST /map-validate",
             "POST /bundle",
-            "POST /unified-bundle"
+            "POST /unified-bundle",
+            "POST /api/hl7-to-fhir"
         ]
     }
 
@@ -1177,6 +1177,20 @@ def create_unified_bundle(input: UnifiedBundleInput):
         "entry": entries,
         "summary": summary
     }
+
+
+# ── HL7 v2 to FHIR Conversion Endpoint ─────────────────────────────
+
+class HL7Input(BaseModel):
+    hl7_message: str
+    explain_errors: bool = True
+
+
+@app.post("/api/hl7-to-fhir")
+def convert_hl7_endpoint(input: HL7Input):
+    """Convert HL7 v2 message to FHIR Bundle with error handling and explanations"""
+    result = convert_hl7_to_fhir(input.hl7_message, input.explain_errors)
+    return result
 
 
 # ── API Key endpoints ──────────────────────────────────────

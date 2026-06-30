@@ -30,7 +30,8 @@ def database_url() -> str:
 
 
 def use_postgres() -> bool:
-    return bool(database_url() and psycopg)
+    # Explicitly disable PostgreSQL - force file storage mode
+    return False
 
 
 def utc_now() -> datetime:
@@ -554,11 +555,18 @@ def delete_user_file(email: str) -> dict:
     clean_email = email.lower().strip()
     keys = load_keys()
     
-    if clean_email not in keys:
+    # Find the API key for this email
+    api_key_to_delete = None
+    for api_key, data in keys.items():
+        if data.get("email", "").lower() == clean_email:
+            api_key_to_delete = api_key
+            break
+    
+    if not api_key_to_delete:
         return {"success": False, "message": "User not found"}
     
     # Remove the user from keys
-    del keys[clean_email]
+    del keys[api_key_to_delete]
     save_keys(keys)
     
     return {"success": True, "message": f"User {email} deleted successfully"}

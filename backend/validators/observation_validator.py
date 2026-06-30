@@ -290,10 +290,24 @@ def build_observation_resource(data: dict, loinc_result: dict) -> dict:
 
     # Subject
     subject = data.get("subject", "")
-    if subject and not subject.startswith("Patient/"):
-        subject = f"Patient/{subject}"
     if subject:
-        resource["subject"] = {"reference": subject}
+        # Handle both string and dict formats
+        if isinstance(subject, dict):
+            # If already a proper FHIR reference object, use as-is
+            if "reference" in subject:
+                resource["subject"] = subject
+            else:
+                # Try to extract reference from dict
+                ref = subject.get("reference") or subject.get("id") or subject.get("patient")
+                if ref:
+                    if isinstance(ref, str) and not ref.startswith("Patient/"):
+                        ref = f"Patient/{ref}"
+                    resource["subject"] = {"reference": ref}
+        elif isinstance(subject, str):
+            # String reference
+            if not subject.startswith("Patient/"):
+                subject = f"Patient/{subject}"
+            resource["subject"] = {"reference": subject}
 
     # Effective date
     date = data.get("effectiveDateTime")

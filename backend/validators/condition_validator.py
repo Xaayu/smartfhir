@@ -105,8 +105,23 @@ def validate_condition(data: dict) -> dict:
             "suggested_fix": "Add subject field like 'Patient/P101'."
         })
     else:
-        if not subject.startswith("Patient/"):
-            subject = f"Patient/{subject}"
+        # Handle both string and dict formats
+        if isinstance(subject, dict):
+            # If already a proper FHIR reference object, it's valid
+            if "reference" not in subject:
+                errors.append({
+                    "field": "subject",
+                    "type": "rule_based",
+                    "received": str(subject),
+                    "fix": None,
+                    "message": "Invalid subject structure.",
+                    "explanation": "Subject dict must contain a 'reference' field.",
+                    "suggested_fix": "Use 'subject': {'reference': 'Patient/P101'} or 'subject': 'Patient/P101'"
+                })
+        elif isinstance(subject, str):
+            # String reference - normalize if needed
+            if not subject.startswith("Patient/"):
+                subject = f"Patient/{subject}"
         # Note: Patient existence check removed to allow standalone validation
     # ID auto-generation
     if not data.get("id"):
@@ -156,29 +171,54 @@ def validate_condition(data: dict) -> dict:
             "explanation": "Condition must have a clinical status.",
             "suggested_fix": "Add clinicalStatus. Most common value is 'active'."
         })
-    elif clinical_status.lower() not in VALID_CLINICAL_STATUSES:
-        fix = CLINICAL_STATUS_FIXES.get(clinical_status.lower())
-        errors.append({
-            "field": "clinicalStatus",
-            "type": "rule_based",
-            "received": clinical_status,
-            "fix": fix,
-            "message": f"Invalid clinicalStatus '{clinical_status}'.",
-            "explanation": f"FHIR accepts: {', '.join(VALID_CLINICAL_STATUSES)}",
-            "suggested_fix": f"Change to '{fix}'" if fix else "Use a valid FHIR clinical status."
-        })
+    else:
+        # Handle both string and CodeableConcept dict formats
+        status_str = None
+        if isinstance(clinical_status, str):
+            status_str = clinical_status
+        elif isinstance(clinical_status, dict):
+            # Extract code from CodeableConcept
+            coding = clinical_status.get("coding", [])
+            if isinstance(coding, list) and coding:
+                status_str = coding[0].get("code")
+            else:
+                status_str = clinical_status.get("code")
+        
+        if status_str and status_str.lower() not in VALID_CLINICAL_STATUSES:
+            fix = CLINICAL_STATUS_FIXES.get(status_str.lower())
+            errors.append({
+                "field": "clinicalStatus",
+                "type": "rule_based",
+                "received": str(clinical_status),
+                "fix": fix,
+                "message": f"Invalid clinicalStatus '{status_str}'.",
+                "explanation": f"FHIR accepts: {', '.join(VALID_CLINICAL_STATUSES)}",
+                "suggested_fix": f"Change to '{fix}'" if fix else "Use a valid FHIR clinical status."
+            })
 
     # 4. Verification status check
     verification_status = data.get("verificationStatus")
     if verification_status:
-        if verification_status.lower() not in VALID_VERIFICATION_STATUSES:
-            fix = VERIFICATION_STATUS_FIXES.get(verification_status.lower())
+        # Handle both string and CodeableConcept dict formats
+        status_str = None
+        if isinstance(verification_status, str):
+            status_str = verification_status
+        elif isinstance(verification_status, dict):
+            # Extract code from CodeableConcept
+            coding = verification_status.get("coding", [])
+            if isinstance(coding, list) and coding:
+                status_str = coding[0].get("code")
+            else:
+                status_str = verification_status.get("code")
+        
+        if status_str and status_str.lower() not in VALID_VERIFICATION_STATUSES:
+            fix = VERIFICATION_STATUS_FIXES.get(status_str.lower())
             errors.append({
                 "field": "verificationStatus",
                 "type": "rule_based",
-                "received": verification_status,
+                "received": str(verification_status),
                 "fix": fix,
-                "message": f"Invalid verificationStatus '{verification_status}'.",
+                "message": f"Invalid verificationStatus '{status_str}'.",
                 "explanation": f"FHIR accepts: {', '.join(VALID_VERIFICATION_STATUSES)}",
                 "suggested_fix": f"Change to '{fix}'" if fix else "Use a valid verification status."
             })
@@ -186,14 +226,26 @@ def validate_condition(data: dict) -> dict:
     # 5. Severity check
     severity = data.get("severity")
     if severity:
-        if severity.lower() not in VALID_SEVERITIES:
-            fix = SEVERITY_FIXES.get(severity.lower())
+        # Handle both string and CodeableConcept dict formats
+        severity_str = None
+        if isinstance(severity, str):
+            severity_str = severity
+        elif isinstance(severity, dict):
+            # Extract code from CodeableConcept
+            coding = severity.get("coding", [])
+            if isinstance(coding, list) and coding:
+                severity_str = coding[0].get("code")
+            else:
+                severity_str = severity.get("code")
+        
+        if severity_str and severity_str.lower() not in VALID_SEVERITIES:
+            fix = SEVERITY_FIXES.get(severity_str.lower())
             errors.append({
                 "field": "severity",
                 "type": "rule_based",
-                "received": severity,
+                "received": str(severity),
                 "fix": fix,
-                "message": f"Invalid severity '{severity}'.",
+                "message": f"Invalid severity '{severity_str}'.",
                 "explanation": f"FHIR accepts: {', '.join(VALID_SEVERITIES)}",
                 "suggested_fix": f"Change to '{fix}'" if fix else "Use mild, moderate, or severe."
             })
@@ -236,82 +288,188 @@ def build_condition_resource(data: dict, snomed_result: dict) -> dict:
 
     # Clinical Status (CodeableConcept)
     clinical_status = data.get("clinicalStatus", "active")
-    clinical_status = CLINICAL_STATUS_FIXES.get(
-        clinical_status.lower(), clinical_status.lower()
-    ) if clinical_status.lower() not in VALID_CLINICAL_STATUSES else clinical_status.lower()
-
-    resource["clinicalStatus"] = {
-        "coding": [{
-            "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
-            "code": clinical_status,
-            "display": clinical_status.title()
-        }]
-    }
+    # Handle both string and CodeableConcept dict formats
+    status_str = None
+    if isinstance(clinical_status, str):
+        status_str = clinical_status
+    elif isinstance(clinical_status, dict):
+        # If already a proper FHIR CodeableConcept, use as-is
+        if "coding" in clinical_status:
+            resource["clinicalStatus"] = clinical_status
+        else:
+            # Extract code from dict
+            coding = clinical_status.get("coding", [])
+            if isinstance(coding, list) and coding:
+                status_str = coding[0].get("code")
+            else:
+                status_str = clinical_status.get("code")
+    
+    if status_str:
+        status_str = CLINICAL_STATUS_FIXES.get(
+            status_str.lower(), status_str.lower()
+        ) if status_str.lower() not in VALID_CLINICAL_STATUSES else status_str.lower()
+        resource["clinicalStatus"] = {
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": status_str,
+                "display": status_str.title()
+            }]
+        }
 
     # Verification Status (CodeableConcept)
     verification = data.get("verificationStatus", "confirmed")
-    verification = VERIFICATION_STATUS_FIXES.get(
-        verification.lower(), verification.lower()
-    ) if verification.lower() not in VALID_VERIFICATION_STATUSES else verification.lower()
-
-    resource["verificationStatus"] = {
-        "coding": [{
-            "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
-            "code": verification,
-            "display": verification.title()
-        }]
-    }
+    # Handle both string and CodeableConcept dict formats
+    verification_str = None
+    if isinstance(verification, str):
+        verification_str = verification
+    elif isinstance(verification, dict):
+        # If already a proper FHIR CodeableConcept, use as-is
+        if "coding" in verification:
+            resource["verificationStatus"] = verification
+        else:
+            # Extract code from dict
+            coding = verification.get("coding", [])
+            if isinstance(coding, list) and coding:
+                verification_str = coding[0].get("code")
+            else:
+                verification_str = verification.get("code")
+    
+    if verification_str:
+        verification_str = VERIFICATION_STATUS_FIXES.get(
+            verification_str.lower(), verification_str.lower()
+        ) if verification_str.lower() not in VALID_VERIFICATION_STATUSES else verification_str.lower()
+        resource["verificationStatus"] = {
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+                "code": verification_str,
+                "display": verification_str.title()
+            }]
+        }
 
     # Category
     category = data.get("category", "encounter-diagnosis")
-    resource["category"] = [{
-        "coding": [{
-            "system": "http://terminology.hl7.org/CodeSystem/condition-category",
-            "code": category,
-            "display": category.replace("-", " ").title()
+    # Handle both string and array formats
+    if isinstance(category, list) and category:
+        # If already a proper FHIR category array, use as-is
+        if isinstance(category[0], dict):
+            resource["category"] = category
+        else:
+            # Array of strings - convert first one
+            category = category[0]
+            resource["category"] = [{
+                "coding": [{
+                    "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                    "code": category,
+                    "display": str(category).replace("-", " ").title()
+                }]
+            }]
+    elif isinstance(category, str):
+        resource["category"] = [{
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": category,
+                "display": category.replace("-", " ").title()
+            }]
         }]
-    }]
+    elif isinstance(category, dict):
+        # Single category object, wrap in array
+        resource["category"] = [category]
 
     # Severity
     severity = data.get("severity")
     if severity:
-        severity = SEVERITY_FIXES.get(
-            severity.lower(), severity.lower()
-        ) if severity.lower() not in VALID_SEVERITIES else severity.lower()
+        # Handle both string and CodeableConcept dict formats
+        severity_str = None
+        if isinstance(severity, str):
+            severity_str = severity
+        elif isinstance(severity, dict):
+            # If already a proper FHIR CodeableConcept, use as-is
+            if "coding" in severity:
+                resource["severity"] = severity
+            else:
+                # Extract code from dict
+                coding = severity.get("coding", [])
+                if isinstance(coding, list) and coding:
+                    severity_str = coding[0].get("code")
+                else:
+                    severity_str = severity.get("code")
+        
+        if severity_str:
+            severity_str = SEVERITY_FIXES.get(
+                severity_str.lower(), severity_str.lower()
+            ) if severity_str.lower() not in VALID_SEVERITIES else severity_str.lower()
 
-        SEVERITY_CODES = {
-            "mild": "255604002",
-            "moderate": "6736007",
-            "severe": "24484000"
-        }
-        resource["severity"] = {
-            "coding": [{
-                "system": "http://snomed.info/sct",
-                "code": SEVERITY_CODES.get(severity, "6736007"),
-                "display": severity.title()
-            }]
-        }
+            SEVERITY_CODES = {
+                "mild": "255604002",
+                "moderate": "6736007",
+                "severe": "24484000"
+            }
+            resource["severity"] = {
+                "coding": [{
+                    "system": "http://snomed.info/sct",
+                    "code": SEVERITY_CODES.get(severity_str, "6736007"),
+                    "display": severity_str.title()
+                }]
+            }
 
     # Code with SNOMED
-    code_display = get_nested_value(data, "code.display") or data.get("code", "Unknown")
-    if snomed_result and snomed_result["found"]:
-        resource["code"] = {
-            "coding": [{
-                "system": "http://snomed.info/sct",
-                "code": snomed_result["code"],
-                "display": snomed_result["display"]
-            }],
-            "text": str(code_display)
-        }
+    code = data.get("code")
+    if code:
+        # Handle both string and CodeableConcept dict formats
+        if isinstance(code, dict):
+            # If already a proper FHIR CodeableConcept with coding, use as-is
+            if "coding" in code:
+                resource["code"] = code
+            else:
+                # Simple dict without coding - convert to text
+                resource["code"] = {"text": str(code.get("text", code.get("display", "Unknown")))}
+        elif isinstance(code, str):
+            code_display = code
+            if snomed_result and snomed_result["found"]:
+                resource["code"] = {
+                    "coding": [{
+                        "system": "http://snomed.info/sct",
+                        "code": snomed_result["code"],
+                        "display": snomed_result["display"]
+                    }],
+                    "text": str(code_display)
+                }
+            else:
+                resource["code"] = {"text": str(code_display)}
     else:
-        resource["code"] = {"text": str(code_display)}
+        code_display = get_nested_value(data, "code.display") or "Unknown"
+        if snomed_result and snomed_result["found"]:
+            resource["code"] = {
+                "coding": [{
+                    "system": "http://snomed.info/sct",
+                    "code": snomed_result["code"],
+                    "display": snomed_result["display"]
+                }],
+                "text": str(code_display)
+            }
+        else:
+            resource["code"] = {"text": str(code_display)}
 
     # Subject
     subject = data.get("subject", "")
-    if subject and not subject.startswith("Patient/"):
-        subject = f"Patient/{subject}"
     if subject:
-        resource["subject"] = {"reference": subject}
+        # Handle both string and dict formats
+        if isinstance(subject, dict):
+            # If already a proper FHIR reference object, use as-is
+            if "reference" in subject:
+                resource["subject"] = subject
+            else:
+                # Try to extract reference from dict
+                ref = subject.get("reference") or subject.get("id") or subject.get("patient")
+                if ref:
+                    if isinstance(ref, str) and not ref.startswith("Patient/"):
+                        ref = f"Patient/{ref}"
+                    resource["subject"] = {"reference": ref}
+        elif isinstance(subject, str):
+            # String reference
+            if not subject.startswith("Patient/"):
+                subject = f"Patient/{subject}"
+            resource["subject"] = {"reference": subject}
 
     # Dates
     if data.get("onsetDateTime"):
@@ -331,17 +489,29 @@ def build_condition_resource(data: dict, snomed_result: dict) -> dict:
 def condition_business_rules(data: dict) -> list:
     warnings = []
 
-    clinical_status = (data.get("clinicalStatus") or "").lower()
+    # Handle both string and CodeableConcept dict formats for clinicalStatus
+    clinical_status = data.get("clinicalStatus")
+    clinical_status_str = ""
+    if isinstance(clinical_status, str):
+        clinical_status_str = clinical_status.lower()
+    elif isinstance(clinical_status, dict):
+        # Extract code from CodeableConcept
+        coding = clinical_status.get("coding", [])
+        if isinstance(coding, list) and coding:
+            clinical_status_str = coding[0].get("code", "").lower()
+        else:
+            clinical_status_str = clinical_status.get("code", "").lower()
+    
     abatement = data.get("abatementDateTime")
     onset = data.get("onsetDateTime")
     code = str(
         get_nested_value(data, "code.display") or data.get("code", "")
     ).lower()
 
-    if clinical_status in ["resolved", "remission"] and not abatement:
+    if clinical_status_str in ["resolved", "remission"] and not abatement:
         warnings.append({
             "field": "abatementDateTime",
-            "message": f"Condition marked '{clinical_status}' but no abatement date.",
+            "message": f"Condition marked '{clinical_status_str}' but no abatement date.",
             "suggestion": "Add abatementDateTime to indicate when condition ended."
         })
 

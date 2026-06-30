@@ -92,8 +92,21 @@ def validate_encounter(data: dict) -> dict:
             "suggested_fix": "Add subject like 'Patient/P101'."
         })
     else:
-        if not subject.startswith("Patient/"):
-            subject = f"Patient/{subject}"
+        # Handle both string and dict formats
+        if isinstance(subject, dict):
+            if "reference" not in subject:
+                errors.append({
+                    "field": "subject",
+                    "type": "rule_based",
+                    "received": str(subject),
+                    "fix": None,
+                    "message": "Invalid subject structure.",
+                    "explanation": "Subject dict must contain a 'reference' field.",
+                    "suggested_fix": "Use 'subject': {'reference': 'Patient/P101'} or 'subject': 'Patient/P101'"
+                })
+        elif isinstance(subject, str):
+            if not subject.startswith("Patient/"):
+                subject = f"Patient/{subject}"
         # Note: Patient existence check removed to allow standalone validation
     # ID auto-generation
     if not data.get("id"):
@@ -122,17 +135,19 @@ def validate_encounter(data: dict) -> dict:
             "explanation": "Encounter must have a status.",
             "suggested_fix": "Add status. Common values: planned, in-progress, finished."
         })
-    elif status.lower() not in VALID_STATUSES:
-        fix = STATUS_FIXES.get(status.lower())
-        errors.append({
-            "field": "status",
-            "type": "rule_based",
-            "received": status,
-            "fix": fix,
-            "message": f"Invalid status '{status}'.",
-            "explanation": f"FHIR accepts: {', '.join(VALID_STATUSES)}",
-            "suggested_fix": f"Change to '{fix}'" if fix else "Use a valid status."
-        })
+    elif isinstance(status, str):
+        if status.lower() not in VALID_STATUSES:
+            fix = STATUS_FIXES.get(status.lower())
+            errors.append({
+                "field": "status",
+                "type": "rule_based",
+                "received": status,
+                "fix": fix,
+                "message": f"Invalid status '{status}'.",
+                "explanation": f"FHIR accepts: {', '.join(VALID_STATUSES)}",
+                "suggested_fix": f"Change to '{fix}'" if fix else "Use a valid status."
+            })
+    # If status is a dict (CodeableConcept), skip validation - it's already in FHIR format
 
     # 3. Class check
     encounter_class = data.get("class")
@@ -146,16 +161,18 @@ def validate_encounter(data: dict) -> dict:
             "explanation": "Encounter must have a class.",
             "suggested_fix": "Add class: AMB, IMP, or EMER."
         })
-    elif encounter_class.lower() not in CLASS_CODES:
-        errors.append({
-            "field": "class",
-            "type": "ai_needed",
-            "received": encounter_class,
-            "fix": None,
-            "message": f"Unrecognized class '{encounter_class}'.",
-            "explanation": None,
-            "suggested_fix": None
-        })
+    elif isinstance(encounter_class, str):
+        if encounter_class.lower() not in CLASS_CODES:
+            errors.append({
+                "field": "class",
+                "type": "ai_needed",
+                "received": encounter_class,
+                "fix": None,
+                "message": f"Unrecognized class '{encounter_class}'.",
+                "explanation": None,
+                "suggested_fix": None
+            })
+    # If class is a dict (Coding), skip validation - it's already in FHIR format
 
     # 4. Period dates
     start = get_nested_value(data, "period.start")
@@ -244,15 +261,27 @@ def encounter_business_rules(data: dict) -> list:
                 "suggestion": "Start date must be before or equal to end date."
             })
 
-    status = (data.get("status") or "").lower()
-    if status == "finished" and not end:
+    # Handle status as string or dict
+    status_val = data.get("status")
+    status_str = ""
+    if isinstance(status_val, str):
+        status_str = status_val.lower()
+    elif isinstance(status_val, dict):
+        # Extract code from CodeableConcept
+        coding = status_val.get("coding", [])
+        if isinstance(coding, list) and coding:
+            status_str = coding[0].get("code", "").lower()
+        else:
+            status_str = status_val.get("code", "").lower()
+    
+    if status_str == "finished" and not end:
         warnings.append({
             "field": "period.end",
             "message": "Encounter marked 'finished' but no end date.",
             "suggestion": "Add period.end for finished encounters."
         })
 
-    if status == "planned" and start:
+    if status_str == "planned" and start:
         try:
             fixed_start = fix_date(str(start).strip())
             if fixed_start and len(fixed_start) == 10:
@@ -282,73 +311,157 @@ def build_encounter_resource(data: dict) -> dict:
 
     # Class
     encounter_class = data.get("class", "AMB")
-    class_info = CLASS_CODES.get(
-        encounter_class.lower(),
-        {"code": encounter_class.upper(), "display": encounter_class.title()}
-    )
-    resource["class"] = {
-        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
-        "code": class_info["code"],
-        "display": class_info["display"]
-    }
+    if isinstance(encounter_class, dict) and "coding" in encounter_class:
+        # Already a proper FHIR Coding object
+        resource["class"] = encounter_class
+    elif isinstance(encounter_class, dict):
+        # Dict without coding - try to extract
+        code = encounter_class.get("code")
+        display = encounter_class.get("display")
+        if code:
+            resource["class"] = {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+                "code": code,
+                "display": display or code
+            }
+    else:
+        # String
+        class_info = CLASS_CODES.get(
+            encounter_class.lower(),
+            {"code": encounter_class.upper(), "display": encounter_class.title()}
+        )
+        resource["class"] = {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+            "code": class_info["code"],
+            "display": class_info["display"]
+        }
 
     # Type
     encounter_type = data.get("type")
     if encounter_type:
-        resource["type"] = [{
-            "coding": [{
-                "display": str(encounter_type)
-            }],
-            "text": str(encounter_type)
-        }]
+        if isinstance(encounter_type, list):
+            # If already an array, check if it's proper FHIR format
+            if encounter_type and isinstance(encounter_type[0], dict):
+                resource["type"] = encounter_type
+            else:
+                # Array of strings - convert
+                resource["type"] = [{
+                    "coding": [{"display": str(t)}],
+                    "text": str(t)
+                } for t in encounter_type]
+        elif isinstance(encounter_type, dict):
+            # Single CodeableConcept
+            resource["type"] = [encounter_type]
+        else:
+            # String
+            resource["type"] = [{
+                "coding": [{"display": str(encounter_type)}],
+                "text": str(encounter_type)
+            }]
 
     # Subject
     subject = data.get("subject", "")
-    if subject and not subject.startswith("Patient/"):
-        subject = f"Patient/{subject}"
     if subject:
-        resource["subject"] = {"reference": subject}
+        if isinstance(subject, dict):
+            if "reference" in subject:
+                resource["subject"] = subject
+            else:
+                ref = subject.get("reference") or subject.get("id") or subject.get("patient")
+                if ref:
+                    if isinstance(ref, str) and not ref.startswith("Patient/"):
+                        ref = f"Patient/{ref}"
+                    resource["subject"] = {"reference": ref}
+        elif isinstance(subject, str):
+            if not subject.startswith("Patient/"):
+                subject = f"Patient/{subject}"
+            resource["subject"] = {"reference": subject}
 
     # Period
-    period = {}
-    start_value = get_nested_value(data, "period.start")
-    if start_value:
-        period["start"] = fix_date(start_value)
-    end_value = get_nested_value(data, "period.end")
-    if end_value:
-        period["end"] = fix_date(end_value)
-    if period:
-        resource["period"] = period
+    period = data.get("period", {})
+    if isinstance(period, dict):
+        # If already a proper FHIR Period object, use as-is
+        if "start" in period or "end" in period:
+            resource["period"] = period
+        else:
+            # Build from nested values
+            period_obj = {}
+            start_value = get_nested_value(data, "period.start")
+            if start_value:
+                period_obj["start"] = fix_date(start_value)
+            end_value = get_nested_value(data, "period.end")
+            if end_value:
+                period_obj["end"] = fix_date(end_value)
+            if period_obj:
+                resource["period"] = period_obj
 
     # Reason
     reason = data.get("reasonCode")
     if reason:
-        resource["reasonCode"] = [{
-            "coding": [{"display": str(reason)}],
-            "text": str(reason)
-        }]
+        if isinstance(reason, list):
+            if reason and isinstance(reason[0], dict):
+                resource["reasonCode"] = reason
+            else:
+                resource["reasonCode"] = [{
+                    "coding": [{"display": str(r)}],
+                    "text": str(r)
+                } for r in reason]
+        elif isinstance(reason, dict):
+            resource["reasonCode"] = [reason]
+        else:
+            resource["reasonCode"] = [{
+                "coding": [{"display": str(reason)}],
+                "text": str(reason)
+            }]
 
     # Priority
     priority = data.get("priority")
     if priority:
-        resource["priority"] = {
-            "coding": [{"display": str(priority)}],
-            "text": str(priority)
-        }
+        if isinstance(priority, dict) and "coding" in priority:
+            resource["priority"] = priority
+        elif isinstance(priority, dict):
+            resource["priority"] = {
+                "coding": [{"display": priority.get("display", str(priority))}],
+                "text": priority.get("text", str(priority))
+            }
+        else:
+            resource["priority"] = {
+                "coding": [{"display": str(priority)}],
+                "text": str(priority)
+            }
 
     # Location
     location = data.get("location")
     if location:
-        resource["location"] = [{
-            "location": {"display": str(location)}
-        }]
+        if isinstance(location, list):
+            if location and isinstance(location[0], dict):
+                resource["location"] = location
+            else:
+                resource["location"] = [{
+                    "location": {"display": str(l)}
+                } for l in location]
+        elif isinstance(location, dict):
+            resource["location"] = [location]
+        else:
+            resource["location"] = [{
+                "location": {"display": str(location)}
+            }]
 
     # Participant (doctor)
     participant = data.get("participant")
     if participant:
-        resource["participant"] = [{
-            "individual": {"display": str(participant)}
-        }]
+        if isinstance(participant, list):
+            if participant and isinstance(participant[0], dict):
+                resource["participant"] = participant
+            else:
+                resource["participant"] = [{
+                    "individual": {"display": str(p)}
+                } for p in participant]
+        elif isinstance(participant, dict):
+            resource["participant"] = [participant]
+        else:
+            resource["participant"] = [{
+                "individual": {"display": str(participant)}
+            }]
 
     # Note
     if data.get("note"):

@@ -3,6 +3,7 @@ from pydantic import ValidationError
 import json
 from datetime import datetime
 import re
+from cross_resource_validator import CrossResourceValidator
 
 # Known rule-based error patterns
 
@@ -196,6 +197,342 @@ def validate_patient(data: dict) -> dict:
             "suggested_fix": f"Add a unique identifier like 'id': '{generated_id}'"
         })
 
+    # Choice field validation: deceasedBoolean vs deceasedDateTime (mutually exclusive)
+    has_deceased_boolean = "deceasedBoolean" in data and data["deceasedBoolean"] is not None
+    has_deceased_datetime = "deceasedDateTime" in data and data["deceasedDateTime"] is not None
+    if has_deceased_boolean and has_deceased_datetime:
+        errors.append({
+            "field": "deceasedBoolean",
+            "type": "rule_based",
+            "received": f"deceasedBoolean={data['deceasedBoolean']}, deceasedDateTime={data['deceasedDateTime']}",
+            "fix": None,
+            "message": "Cannot have both deceasedBoolean and deceasedDateTime.",
+            "explanation": "FHIR allows only one deceased field: either deceasedBoolean (boolean) or deceasedDateTime (datetime).",
+            "suggested_fix": "Remove one of the deceased fields. Use deceasedBoolean for simple yes/no, or deceasedDateTime for exact time of death."
+        })
+
+    # Choice field validation: multipleBirthBoolean vs multipleBirthInteger (mutually exclusive)
+    has_multiple_birth_boolean = "multipleBirthBoolean" in data and data["multipleBirthBoolean"] is not None
+    has_multiple_birth_integer = "multipleBirthInteger" in data and data["multipleBirthInteger"] is not None
+    if has_multiple_birth_boolean and has_multiple_birth_integer:
+        errors.append({
+            "field": "multipleBirthBoolean",
+            "type": "rule_based",
+            "received": f"multipleBirthBoolean={data['multipleBirthBoolean']}, multipleBirthInteger={data['multipleBirthInteger']}",
+            "fix": None,
+            "message": "Cannot have both multipleBirthBoolean and multipleBirthInteger.",
+            "explanation": "FHIR allows only one multipleBirth field: either multipleBirthBoolean (true/false) or multipleBirthInteger (number).",
+            "suggested_fix": "Remove one of the multipleBirth fields. Use multipleBirthBoolean for yes/no, or multipleBirthInteger for the actual birth order number."
+        })
+
+    # Reference field validation
+    reference_fields = ["generalPractitioner", "managingOrganization"]
+    for field in reference_fields:
+        if field in data:
+            ref = data[field]
+            if isinstance(ref, str):
+                # Check if reference has resource type prefix
+                if not ref.startswith(("Patient/", "Practitioner/", "Organization/", "Location/", "RelatedPerson/")):
+                    errors.append({
+                        "field": field,
+                        "type": "rule_based",
+                        "received": ref,
+                        "fix": None,
+                        "message": f"Invalid reference format '{ref}'.",
+                        "explanation": f"FHIR references must include the resource type (e.g., 'Practitioner/prac-001').",
+                        "suggested_fix": f"Add the resource type prefix. For {field}, use 'Practitioner/...' or 'Organization/...' as appropriate."
+                    })
+            elif isinstance(ref, dict):
+                if "reference" not in ref:
+                    errors.append({
+                        "field": field,
+                        "type": "rule_based",
+                        "received": str(ref),
+                        "fix": None,
+                        "message": f"Missing 'reference' field in {field}.",
+                        "explanation": "When {field} is an object, it must contain a 'reference' field.",
+                        "suggested_fix": f"Add a 'reference' field to the {field} object."
+                    })
+                elif ref["reference"] and not ref["reference"].startswith(("Patient/", "Practitioner/", "Organization/", "Location/", "RelatedPerson/")):
+                    errors.append({
+                        "field": f"{field}.reference",
+                        "type": "rule_based",
+                        "received": ref["reference"],
+                        "fix": None,
+                        "message": f"Invalid reference format '{ref['reference']}'.",
+                        "explanation": "FHIR references must include the resource type (e.g., 'Practitioner/prac-001').",
+                        "suggested_fix": "Add the resource type prefix to the reference."
+                    })
+
+    # Meta field validation
+    if "meta" in data and isinstance(data["meta"], dict):
+        meta = data["meta"]
+        # versionId should be string
+        if "versionId" in meta and not isinstance(meta["versionId"], str):
+            errors.append({
+                "field": "meta.versionId",
+                "type": "rule_based",
+                "received": str(meta["versionId"]),
+                "fix": str(meta["versionId"]),
+                "message": "meta.versionId must be a string.",
+                "explanation": "FHIR requires versionId to be a string type.",
+                "suggested_fix": f"Convert versionId to string: '{meta['versionId']}'"
+            })
+        # lastUpdated should be valid ISO 8601 datetime with timezone
+        if "lastUpdated" in meta:
+            last_updated = meta["lastUpdated"]
+            if isinstance(last_updated, str):
+                # Check if it has timezone (Z or +/-HH:MM)
+                if not (last_updated.endswith("Z") or re.search(r"[+-]\d{2}:\d{2}$", last_updated)):
+                    errors.append({
+                        "field": "meta.lastUpdated",
+                        "type": "rule_based",
+                        "received": last_updated,
+                        "fix": None,
+                        "message": "meta.lastUpdated must include timezone.",
+                        "explanation": "FHIR requires lastUpdated to be an ISO 8601 datetime with timezone (e.g., '2026-06-30T10:30:00Z' or '2026-06-30T10:30:00+05:30').",
+                        "suggested_fix": "Add timezone suffix 'Z' for UTC or '+/-HH:MM' for local timezone."
+                    })
+
+    # Telecom array validation
+    if "telecom" in data and isinstance(data["telecom"], list):
+        valid_telecom_systems = ["phone", "email", "fax", "pager", "url", "sms", "other"]
+        valid_telecom_uses = ["home", "work", "temp", "old", "mobile"]
+        for idx, telecom in enumerate(data["telecom"]):
+            if not isinstance(telecom, dict):
+                errors.append({
+                    "field": f"telecom[{idx}]",
+                    "type": "rule_based",
+                    "received": str(telecom),
+                    "fix": None,
+                    "message": f"telecom[{idx}] must be an object.",
+                    "explanation": "Each telecom entry must be a ContactPoint object with system, value, and use fields.",
+                    "suggested_fix": "Convert telecom entry to an object with proper structure."
+                })
+                continue
+
+            # Validate system field
+            if "system" in telecom and telecom["system"] not in valid_telecom_systems:
+                errors.append({
+                    "field": f"telecom[{idx}].system",
+                    "type": "rule_based",
+                    "received": telecom["system"],
+                    "fix": None,
+                    "message": f"Invalid telecom system '{telecom['system']}'.",
+                    "explanation": f"FHIR telecom system must be one of: {', '.join(valid_telecom_systems)}.",
+                    "suggested_fix": f"Use a valid system value from: {', '.join(valid_telecom_systems)}."
+                })
+
+            # Validate use field
+            if "use" in telecom and telecom["use"] not in valid_telecom_uses:
+                errors.append({
+                    "field": f"telecom[{idx}].use",
+                    "type": "rule_based",
+                    "received": telecom["use"],
+                    "fix": None,
+                    "message": f"Invalid telecom use '{telecom['use']}'.",
+                    "explanation": f"FHIR telecom use must be one of: {', '.join(valid_telecom_uses)}.",
+                    "suggested_fix": f"Use a valid use value from: {', '.join(valid_telecom_uses)}."
+                })
+
+            # Validate rank field (must be positive integer)
+            if "rank" in telecom:
+                rank = telecom["rank"]
+                if not isinstance(rank, int) or rank < 1:
+                    errors.append({
+                        "field": f"telecom[{idx}].rank",
+                        "type": "rule_based",
+                        "received": str(rank),
+                        "fix": None,
+                        "message": f"Invalid telecom rank '{rank}'.",
+                        "explanation": "FHIR telecom rank must be a positive integer (1 or greater).",
+                        "suggested_fix": "Use a positive integer for rank, or omit the field."
+                    })
+
+    # Empty/null handling in arrays
+    array_fields = ["identifier", "name", "telecom", "address", "contact", "communication", "photo", "extension"]
+    for field in array_fields:
+        if field in data:
+            value = data[field]
+            if isinstance(value, list):
+                # Check for null elements in array
+                for idx, item in enumerate(value):
+                    if item is None:
+                        errors.append({
+                            "field": f"{field}[{idx}]",
+                            "type": "rule_based",
+                            "received": "null",
+                            "fix": None,
+                            "message": f"Null element found in {field} array at index {idx}.",
+                            "explanation": "FHIR arrays should not contain null elements.",
+                            "suggested_fix": f"Remove the null element from {field}[{idx}]."
+                        })
+                    elif isinstance(item, dict):
+                        # Check for empty string values in dict
+                        for key, val in item.items():
+                            if val == "":
+                                errors.append({
+                                    "field": f"{field}[{idx}].{key}",
+                                    "type": "rule_based",
+                                    "received": "",
+                                    "fix": None,
+                                    "message": f"Empty string value in {field}[{idx}].{key}.",
+                                    "explanation": "Empty string values may cause validation issues in FHIR.",
+                                    "suggested_fix": f"Remove the {key} field or provide a valid value."
+                                })
+
+    # Extension array validation
+    if "extension" in data and isinstance(data["extension"], list):
+        for idx, ext in enumerate(data["extension"]):
+            if not isinstance(ext, dict):
+                errors.append({
+                    "field": f"extension[{idx}]",
+                    "type": "rule_based",
+                    "received": str(ext),
+                    "fix": None,
+                    "message": f"extension[{idx}] must be an object.",
+                    "explanation": "Each extension must be an Extension object with url and value fields.",
+                    "suggested_fix": "Convert extension entry to an object with proper structure."
+                })
+                continue
+
+            # Check required url field
+            if "url" not in ext:
+                errors.append({
+                    "field": f"extension[{idx}]",
+                    "type": "rule_based",
+                    "received": str(ext),
+                    "fix": None,
+                    "message": f"extension[{idx}] missing required 'url' field.",
+                    "explanation": "FHIR extensions must have a 'url' field identifying the extension definition.",
+                    "suggested_fix": "Add a 'url' field to the extension object."
+                })
+            elif not isinstance(ext["url"], str) or not ext["url"].startswith("http"):
+                errors.append({
+                    "field": f"extension[{idx}].url",
+                    "type": "rule_based",
+                    "received": str(ext["url"]),
+                    "fix": None,
+                    "message": f"Invalid extension URL '{ext['url']}'.",
+                    "explanation": "FHIR extension URLs must be valid HTTP/HTTPS URLs.",
+                    "suggested_fix": "Provide a valid HTTP/HTTPS URL for the extension."
+                })
+
+            # Check that at least one value field is present
+            value_fields = [k for k in ext.keys() if k.startswith("value") and k != "url"]
+            if not value_fields:
+                errors.append({
+                    "field": f"extension[{idx}]",
+                    "type": "rule_based",
+                    "received": str(ext),
+                    "fix": None,
+                    "message": f"extension[{idx}] missing value field.",
+                    "explanation": "FHIR extensions must have a value field (e.g., valueString, valueCodeableConcept, valueBoolean).",
+                    "suggested_fix": "Add an appropriate value field to the extension."
+                })
+
+    # Contact array validation
+    if "contact" in data and isinstance(data["contact"], list):
+        for idx, contact in enumerate(data["contact"]):
+            if not isinstance(contact, dict):
+                errors.append({
+                    "field": f"contact[{idx}]",
+                    "type": "rule_based",
+                    "received": str(contact),
+                    "fix": None,
+                    "message": f"contact[{idx}] must be an object.",
+                    "explanation": "Each contact must be a PatientContact object with relationship, name, and telecom fields.",
+                    "suggested_fix": "Convert contact entry to an object with proper structure."
+                })
+                continue
+
+            # Validate gender field (must be valid FHIR gender)
+            if "gender" in contact and contact["gender"] not in ["male", "female", "other", "unknown"]:
+                errors.append({
+                    "field": f"contact[{idx}].gender",
+                    "type": "rule_based",
+                    "received": contact["gender"],
+                    "fix": None,
+                    "message": f"Invalid contact gender '{contact['gender']}'.",
+                    "explanation": "FHIR gender must be one of: male, female, other, unknown.",
+                    "suggested_fix": "Use a valid FHIR gender value."
+                })
+
+            # Validate name field (if present, must have family or given)
+            if "name" in contact:
+                name = contact["name"]
+                if isinstance(name, dict):
+                    if not name.get("family") and not name.get("given"):
+                        errors.append({
+                            "field": f"contact[{idx}].name",
+                            "type": "rule_based",
+                            "received": str(name),
+                            "fix": None,
+                            "message": f"contact[{idx}].name must have either 'family' or 'given' field.",
+                            "explanation": "FHIR HumanName requires at least a family name or given name(s).",
+                            "suggested_fix": "Add either 'family' or 'given' field to the contact name."
+                        })
+
+    # Photo array validation
+    if "photo" in data and isinstance(data["photo"], list):
+        valid_content_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+        for idx, photo in enumerate(data["photo"]):
+            if not isinstance(photo, dict):
+                errors.append({
+                    "field": f"photo[{idx}]",
+                    "type": "rule_based",
+                    "received": str(photo),
+                    "fix": None,
+                    "message": f"photo[{idx}] must be an object.",
+                    "explanation": "Each photo must be an Attachment object with contentType and either url or data field.",
+                    "suggested_fix": "Convert photo entry to an object with proper structure."
+                })
+                continue
+
+            # Validate contentType
+            if "contentType" in photo and photo["contentType"] not in valid_content_types:
+                errors.append({
+                    "field": f"photo[{idx}].contentType",
+                    "type": "rule_based",
+                    "received": photo["contentType"],
+                    "fix": None,
+                    "message": f"Invalid photo contentType '{photo['contentType']}'.",
+                    "explanation": f"FHIR photo contentType must be one of: {', '.join(valid_content_types)}.",
+                    "suggested_fix": f"Use a valid content type from: {', '.join(valid_content_types)}."
+                })
+
+            # Check that either url or data is present
+            has_url = "url" in photo and photo["url"]
+            has_data = "data" in photo and photo["data"]
+            if not has_url and not has_data:
+                errors.append({
+                    "field": f"photo[{idx}]",
+                    "type": "rule_based",
+                    "received": str(photo),
+                    "fix": None,
+                    "message": f"photo[{idx}] missing required 'url' or 'data' field.",
+                    "explanation": "FHIR Attachment must have either a 'url' (external reference) or 'data' (base64-encoded content).",
+                    "suggested_fix": "Add either a 'url' or 'data' field to the photo object."
+                })
+
+            # Validate data field (if present, should be base64)
+            if has_data and isinstance(photo["data"], str):
+                data_val = photo["data"]
+                # Basic base64 validation (should only contain base64 chars)
+                import base64
+                try:
+                    base64.b64decode(data_val, validate=True)
+                except Exception:
+                    errors.append({
+                        "field": f"photo[{idx}].data",
+                        "type": "rule_based",
+                        "received": data_val[:50] + "..." if len(data_val) > 50 else data_val,
+                        "fix": None,
+                        "message": f"Invalid base64 data in photo[{idx}].data.",
+                        "explanation": "FHIR photo data must be valid base64-encoded content.",
+                        "suggested_fix": "Provide valid base64-encoded image data."
+                    })
+
     try:
         cleaned = apply_known_fixes(data.copy())
         Patient.model_validate(cleaned)
@@ -356,3 +693,44 @@ def business_rule_checks(data: dict) -> list:
                 })
 
     return warnings
+
+
+def validate_cross_resource(
+    resource: dict,
+    patient_store: dict = None,
+    patient: dict = None
+) -> dict:
+    """
+    Validate cross-resource relationships for non-Patient resources.
+    
+    Args:
+        resource: The FHIR resource to validate
+        patient_store: Dictionary of all patients for reference resolution
+        patient: The specific patient resource if already known
+    
+    Returns:
+        Dictionary with valid, errors, and warnings
+    """
+    if patient_store is None:
+        patient_store = {}
+    
+    validator = CrossResourceValidator(patient_store)
+    resource_type = resource.get("resourceType")
+    errors = []
+    
+    if resource_type == "Observation":
+        errors = validator.validate_observation_for_patient(resource, patient)
+    elif resource_type == "MedicationRequest":
+        errors = validator.validate_medication_request_for_patient(resource, patient)
+    elif resource_type == "Encounter":
+        errors = validator.validate_encounter_for_patient(resource, patient)
+    elif resource_type == "Condition":
+        errors = validator.validate_condition_for_patient(resource, patient)
+    elif resource_type == "Bundle":
+        errors = validator.validate_bundle_patient_consistency(resource)
+    
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": []
+    }

@@ -1,0 +1,60 @@
+{
+  "resourceType": "Patient",
+  "id": "patient-13e4e96f",
+  "active": true,
+  "gender": "male",
+  "birthDate": "2020-02-28",
+
+  "name": {
+    "use": "official",
+    "family": "Doe",
+    "given": ["John"]
+  },
+
+  "identifier": {
+    "system": "http://hospital.org/mrn",
+    "value": "12345"
+  },
+
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "555-1234",
+      "use": "home"
+    }
+  ],
+
+  "address": {
+    "line": ["123 Main Street"],
+    "city": "Springfield",
+    "postalCode": "12345",
+    "country": "USA"
+  },
+
+  "managingOrganization": {
+    "reference": "Organization/123"
+  },
+
+  "generalPractitioner": {
+    "reference": "Practitioner/abc"
+  },
+
+  "communication": [
+    {
+      "language": {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/ValueSet/all-languages",
+            "code": "en"
+          }
+        ]
+      },
+      "preferred": true
+    }
+  ],
+
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2024-01-01T00:00:00Z"
+  }
+}

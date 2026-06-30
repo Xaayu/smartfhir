@@ -1,0 +1,126 @@
+{
+  "Observation": {
+    "code": {
+      "fhir_field": "code",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:15:53.028196",
+      "usage_count": 1
+    },
+    "valueQuantity": {
+      "fhir_field": "valueQuantity.value",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:15:53.064889",
+      "usage_count": 1
+    },
+    "effectiveDateTime": {
+      "fhir_field": "effectiveDateTime",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:15:53.107385",
+      "usage_count": 1
+    }
+  },
+  "Patient": {
+    "ptnt_id": {
+      "fhir_field": "id",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:15:53.146675",
+      "usage_count": 1
+    },
+    "frst_name": {
+      "fhir_field": "name.given",
+      "confidence": 0.9411764705882353,
+      "learned_at": "2026-06-30T15:15:53.178162",
+      "usage_count": 1
+    },
+    "lst_name": {
+      "fhir_field": "name.family",
+      "confidence": 0.9333333333333333,
+      "learned_at": "2026-06-30T15:15:53.210359",
+      "usage_count": 1
+    },
+    "dte_of_brth": {
+      "fhir_field": "birthDate",
+      "confidence": 0.9,
+      "learned_at": "2026-06-30T15:15:53.242308",
+      "usage_count": 1
+    },
+    "gendr": {
+      "fhir_field": "gender",
+      "confidence": 0.9090909090909091,
+      "learned_at": "2026-06-30T15:15:53.273754",
+      "usage_count": 1
+    },
+    "phne_num": {
+      "fhir_field": "telecom",
+      "confidence": 0.7777777777777778,
+      "learned_at": "2026-06-30T15:15:53.305089",
+      "usage_count": 1
+    },
+    "emil_addr": {
+      "fhir_field": "address",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:15:53.331780",
+      "usage_count": 1
+    },
+    "addrss": {
+      "fhir_field": "address",
+      "confidence": 0.9230769230769231,
+      "learned_at": "2026-06-30T15:15:53.362482",
+      "usage_count": 1
+    },
+    "cty": {
+      "fhir_field": "address.city",
+      "confidence": 0.8571428571428571,
+      "learned_at": "2026-06-30T15:15:53.392234",
+      "usage_count": 1
+    },
+    "stte": {
+      "fhir_field": "address.state",
+      "confidence": 0.8888888888888888,
+      "learned_at": "2026-06-30T15:15:53.421413",
+      "usage_count": 1
+    },
+    "zp_code": {
+      "fhir_field": "address.postalCode",
+      "confidence": 0.9230769230769231,
+      "learned_at": "2026-06-30T15:15:53.445998",
+      "usage_count": 1
+    },
+    "when_born": {
+      "fhir_field": "birthDate",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:15:53.511671",
+      "usage_count": 1
+    },
+    "is_active": {
+      "fhir_field": "active",
+      "confidence": 0.8571428571428571,
+      "learned_at": "2026-06-30T15:15:53.546422",
+      "usage_count": 1
+    },
+    "date_deceased": {
+      "fhir_field": "deceasedBoolean",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:15:53.582463",
+      "usage_count": 1
+    },
+    "telecom.0.system": {
+      "fhir_field": "telecom",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:42:54.586771",
+      "usage_count": 1
+    },
+    "telecom.0.value": {
+      "fhir_field": "telecom",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:42:54.702082",
+      "usage_count": 1
+    },
+    "telecom.0.use": {
+      "fhir_field": "telecom",
+      "confidence": 0.8,
+      "learned_at": "2026-06-30T15:42:54.761211",
+      "usage_count": 1
+    }
+  }
+}
