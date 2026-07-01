@@ -1,10 +1,11 @@
 import httpx
 import json
 import os
+from api_key_manager import store_path
 
 RXNORM_API = "https://rxnav.nlm.nih.gov/REST/drugs.json"
 RXNORM_SEARCH_API = "https://rxnav.nlm.nih.gov/REST/approximateTerm.json"
-CACHE_PATH = "store/rxnorm_cache.json"
+CACHE_PATH = store_path("rxnorm_cache.json")
 LOOKUP_TIMEOUT_SECONDS = float(os.getenv("TERMINOLOGY_LOOKUP_TIMEOUT_SECONDS", "2.0"))
 
 COMMON_RXNORM = {

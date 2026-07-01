@@ -11,8 +11,10 @@ from api_key_manager import (
     delete_user,
     use_postgres,
     db_connect,
+    init_api_database,
+    store_dir,
+    store_path,
 )
-from database import init_database
 from typing import Optional, List
 
 
@@ -55,10 +57,10 @@ from hl7_converter import convert_hl7_to_fhir
 
 
 # 2. Store manager functions (ADD HERE)
-PATIENTS_STORE = "store/patients.json"
-OBSERVATIONS_STORE = "store/observations.json"
-API_KEY_REQUESTS_PATH = "store/api_key_requests.json"
-FEEDBACK_STORE = "store/feedback.json"
+PATIENTS_STORE = store_path("patients.json")
+OBSERVATIONS_STORE = store_path("observations.json")
+API_KEY_REQUESTS_PATH = store_path("api_key_requests.json")
+FEEDBACK_STORE = store_path("feedback.json")
 API_KEY_REQUEST_WINDOW_SECONDS = 60 * 60
 MAX_API_KEY_REQUESTS_PER_EMAIL = 3
 MAX_API_KEY_REQUESTS_PER_IP = 10
@@ -73,7 +75,11 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on application startup"""
-    print("📁 Using local file storage (PostgreSQL disabled)")
+    if use_postgres():
+        init_api_database()
+        print("Using PostgreSQL storage for API keys and usage.")
+    else:
+        print(f"Using local file storage for API keys and usage: {store_dir()}")
 
 # Note: OAuth routes removed for simplified email-only flow
 

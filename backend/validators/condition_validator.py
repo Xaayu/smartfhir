@@ -1,5 +1,6 @@
 from terminology.snomed_lookup import lookup_snomed
 from validator import fix_date
+from api_key_manager import store_path
 import json
 import os
 def get_nested_value(data: dict, key: str):
@@ -18,7 +19,7 @@ def get_nested_value(data: dict, key: str):
 
 
 
-PATIENTS_STORE = "store/patients.json"
+PATIENTS_STORE = store_path("patients.json")
 
 VALID_CLINICAL_STATUSES = [
     "active", "recurrence", "relapse",

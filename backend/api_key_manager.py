@@ -17,12 +17,22 @@ except ImportError:  # Keeps local file fallback usable before deps are installe
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
-KEYS_PATH = os.path.join(BASE_DIR, "store", "keys.json")
-USAGE_PATH = os.path.join(BASE_DIR, "store", "usage.jsonl")
 MONTHLY_LIMIT = 500
 
 load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+
+def store_dir() -> str:
+    return os.getenv("SMARTFHIR_STORE_DIR") or os.path.join(BASE_DIR, "store")
+
+
+def store_path(filename: str) -> str:
+    return os.path.join(store_dir(), filename)
+
+
+KEYS_PATH = store_path("keys.json")
+USAGE_PATH = store_path("usage.jsonl")
 
 
 def database_url() -> str:
@@ -30,8 +40,30 @@ def database_url() -> str:
 
 
 def use_postgres() -> bool:
-    # Explicitly disable PostgreSQL - force file storage mode
-    return False
+    enabled = os.getenv("USE_POSTGRES", "false").lower() in {"1", "true", "yes", "on"}
+    if not enabled:
+        return False
+
+    if not database_url():
+        print("USE_POSTGRES=true but SUPABASE_DB_URL/DATABASE_URL is missing; using local file storage.")
+        return False
+
+    if psycopg is None:
+        print("USE_POSTGRES=true but psycopg is not installed; using local file storage.")
+        return False
+
+    return True
+
+
+def init_api_database():
+    if not use_postgres():
+        return
+
+    schema_path = os.path.join(BASE_DIR, "supabase_schema.sql")
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            with open(schema_path, "r", encoding="utf-8") as f:
+                cur.execute(f.read())
 
 
 def utc_now() -> datetime:

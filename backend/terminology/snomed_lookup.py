@@ -1,9 +1,10 @@
 import httpx
 import json
 import os
+from api_key_manager import store_path
 
 SNOMED_API = "https://clinicaltables.nlm.nih.gov/api/snomed/v3/search"
-CACHE_PATH = "store/snomed_cache.json"
+CACHE_PATH = store_path("snomed_cache.json")
 LOOKUP_TIMEOUT_SECONDS = float(os.getenv("TERMINOLOGY_LOOKUP_TIMEOUT_SECONDS", "2.0"))
 
 # Hardcoded common diagnoses → SNOMED CT codes

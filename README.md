@@ -25,9 +25,22 @@ copy ..\.env.example ..\.env
 
 Then set `GEMINI_API_KEY`.
 
+### Persistent API key storage
+
+For production without Supabase, use Render Disk-backed JSON storage:
+
+```bash
+USE_POSTGRES=false
+SMARTFHIR_STORE_DIR="/var/data/store"
+API_KEY_PEPPER="long-random-secret"
+ADMIN_TOKEN="your-founder-admin-token"
+```
+
+Mount a Render Disk at `/var/data`. This keeps API keys valid across deploys and restarts while Supabase is unavailable. If `SMARTFHIR_STORE_DIR` is not set, the backend falls back to `backend/store/`, which is only safe for local development.
+
 ### Supabase Postgres usage tracking
 
-MedTechTools V1 uses Supabase Postgres for API keys, rate limits, usage logging, and founder analytics.
+Supabase Postgres can also be used for API keys, rate limits, usage logging, and founder analytics.
 
 1. Create a Supabase project.
 2. Open the Supabase SQL editor.
@@ -36,11 +49,12 @@ MedTechTools V1 uses Supabase Postgres for API keys, rate limits, usage logging,
 
 ```bash
 SUPABASE_DB_URL="your-supabase-postgres-uri"
+USE_POSTGRES=true
 API_KEY_PEPPER="long-random-secret"
 ADMIN_TOKEN="your-founder-admin-token"
 ```
 
-If `SUPABASE_DB_URL` is not set, the backend falls back to local JSON files for development.
+If `USE_POSTGRES=true` but `SUPABASE_DB_URL` is not set, the backend falls back to JSON file storage.
 
 Founder analytics are available at:
 

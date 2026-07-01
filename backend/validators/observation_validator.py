@@ -1,10 +1,11 @@
 from fhir.resources.observation import Observation
 from pydantic import ValidationError
 from terminology.loinc_lookup import lookup_loinc, get_observation_category
+from api_key_manager import store_path
 import json
 import os
 
-PATIENTS_STORE = "store/patients.json"
+PATIENTS_STORE = store_path("patients.json")
 
 VALID_STATUSES = [
     "registered", "preliminary",

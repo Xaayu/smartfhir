@@ -1,6 +1,7 @@
 ﻿import json
 from validator import fix_date
 from terminology.rxnorm_lookup import lookup_rxnorm
+from api_key_manager import store_path
 import os
 def get_nested_value(data: dict, key: str):
     """Get value from nested dict using dot notation (e.g., 'code.display')"""
@@ -17,7 +18,7 @@ def get_nested_value(data: dict, key: str):
 
 
 
-PATIENTS_STORE = "store/patients.json"
+PATIENTS_STORE = store_path("patients.json")
 
 VALID_STATUSES = [
     "active", "on-hold", "cancelled",

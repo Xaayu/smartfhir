@@ -3,7 +3,7 @@
 ## Overview
 - **Frontend**: Vercel
 - **Backend**: Render
-- **Storage**: Local file storage (no database required)
+- **Storage**: Render Disk-backed file storage (no database required)
 
 ---
 
@@ -43,6 +43,7 @@
 ### Prerequisites
 - Render account
 - GitHub repository with backend code
+- Render Disk attached at `/var/data` for persistent file storage
 - API keys (Google, OpenAI, JWT secret)
 
 ### Steps
@@ -67,10 +68,16 @@
      - **Build Command**: `pip install -r requirements.txt`
      - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
    - Add Environment Variables:
-     - `USE_POSTGRES`: `false` (uses local file storage)
+     - `USE_POSTGRES`: `false` (uses Render Disk file storage)
+     - `SMARTFHIR_STORE_DIR`: `/var/data/store`
+     - `API_KEY_PEPPER`: A long random secret used when hashing API keys
      - `GOOGLE_API_KEY`: Your Google AI API key
      - `JWT_SECRET`: Your JWT secret key
      - `OPENAI_API_KEY`: Your OpenAI API key (if using)
+   - Attach a Render Disk:
+     - **Name**: `smartfhir-data`
+     - **Mount path**: `/var/data`
+     - **Size**: `1 GB` or larger
    - Click "Create Web Service"
 
 3. **Get Backend URL**
@@ -87,7 +94,9 @@ REACT_APP_API_BASE_URL=https://smartfhir-backend.onrender.com
 ```
 
 ### Backend (Render Environment Variables)
-- `USE_POSTGRES`: `false` (uses local file storage for API keys and feedback)
+- `USE_POSTGRES`: `false` when using Render Disk file storage
+- `SMARTFHIR_STORE_DIR`: `/var/data/store`
+- `API_KEY_PEPPER`: A long random secret used when hashing API keys
 - `GOOGLE_API_KEY`: Your Google AI Studio API key
 - `JWT_SECRET`: Generate a secure random string
 - `OPENAI_API_KEY`: Your OpenAI API key (optional)
@@ -96,17 +105,15 @@ REACT_APP_API_BASE_URL=https://smartfhir-backend.onrender.com
 
 ## 4. Storage
 
-The application uses local file storage for:
-- API keys: `backend/store/keys.json`
-- API usage: `backend/store/usage.jsonl`
-- Feedback: `backend/store/feedback.json`
-- Patients: `backend/store/patients.json`
-- Observations: `backend/store/observations.json`
+The recommended fallback while Supabase is unavailable is Render Disk file storage:
 
-**Note**: Render's ephemeral filesystem means data will be reset on each deployment. For production persistence, consider:
-- Using Render Disk (paid feature)
-- Migrating to Supabase PostgreSQL
-- Using external object storage (S3, etc.)
+- Mount a Render Disk at `/var/data`.
+- Set `SMARTFHIR_STORE_DIR=/var/data/store`.
+- Keep `USE_POSTGRES=false`.
+
+API keys, usage logs, feedback, local resource stores, and terminology caches will be written under that persistent directory. Do not store production keys in the app-local `backend/store/` directory on Render; Render's normal filesystem is ephemeral and can reset after redeploys, restarts, or instance replacement.
+
+Supabase can still be used later by setting `USE_POSTGRES=true`, setting `SUPABASE_DB_URL`, and running `backend/supabase_schema.sql` in the Supabase SQL editor.
 
 ---
 
@@ -137,7 +144,7 @@ Should return:
 ### Backend Issues
 - Check Render logs for errors
 - Verify environment variables are set correctly
-- Ensure `USE_POSTGRES=false` is set
+- For Render Disk mode, ensure `USE_POSTGRES=false`, `SMARTFHIR_STORE_DIR=/var/data/store`, and `API_KEY_PEPPER` are set
 
 ### Frontend Issues
 - Check Vercel deployment logs
@@ -145,8 +152,9 @@ Should return:
 - Check browser console for CORS errors
 
 ### Data Persistence Issues
-- If data is lost after deployments, consider using Render Disk or migrating to Supabase
-- Check that `store/` directory is being created and written to
+- Check Render logs for `Using local file storage for API keys and usage: /var/data/store`
+- Confirm the Render Disk is mounted at `/var/data`
+- If data appears under `backend/store/`, `SMARTFHIR_STORE_DIR` is not configured correctly
 
 ---
 

@@ -4,7 +4,7 @@ Parses ER7 format (pipe-delimited) HL7 v2 messages and extracts segments.
 """
 
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -24,6 +24,7 @@ class HL7Message:
     trigger_event: str
     message_structure: str
     segments: Dict[str, List[HL7Segment]]
+    ordered_segments: List[HL7Segment]
     raw: str
     errors: List[Dict]
 
@@ -52,6 +53,14 @@ class HL7Parser:
         errors = []
         message = message.strip()
         
+        # Reset delimiters for each parse
+        self.field_separator = "|"
+        self.component_separator = "^"
+        self.subcomponent_separator = "&"
+        self.repetition_separator = "~"
+        self.escape_character = "\\"
+        self.encoding_chars = "^~\\&"
+        
         # Validate basic structure
         if not message.startswith("MSH"):
             errors.append({
@@ -61,30 +70,24 @@ class HL7Parser:
                 "received": message[:20] if len(message) >= 20 else message
             })
         
-        # Parse encoding characters from MSH
-        if len(message) >= 8:
-            try:
-                self.encoding_chars = message[3:8]
-                if len(self.encoding_chars) >= 4:
-                    self.field_separator = self.encoding_chars[0]
-                    self.component_separator = self.encoding_chars[1]
-                    self.subcomponent_separator = self.encoding_chars[2]
-                    self.repetition_separator = self.encoding_chars[3]
-                    if len(self.encoding_chars) >= 5:
-                        self.escape_character = self.encoding_chars[4]
-            except Exception as e:
-                errors.append({
-                    "type": "parsing_error",
-                    "field": "MSH",
-                    "message": f"Failed to parse encoding characters: {str(e)}",
-                    "received": message[3:8]
-                })
+        # Capture field separator and encoding characters from the MSH segment
+        if len(message) > 3:
+            self.field_separator = message[3]
+            if len(message) >= 8:
+                encoding_chars = message[4:8]
+                if len(encoding_chars) >= 4:
+                    self.component_separator = encoding_chars[0]
+                    self.repetition_separator = encoding_chars[1]
+                    self.escape_character = encoding_chars[2]
+                    self.subcomponent_separator = encoding_chars[3]
+                    self.encoding_chars = encoding_chars
         
-        # Split into segments
+        # Split into segments and parse each segment
         segment_strings = self._split_segments(message)
         
         # Parse each segment
         segments = {}
+        ordered_segments = []
         message_type = "UNKNOWN"
         trigger_event = "UNKNOWN"
         message_structure = "UNKNOWN"
@@ -100,11 +103,11 @@ class HL7Parser:
                 if segment_id not in segments:
                     segments[segment_id] = []
                 segments[segment_id].append(segment)
+                ordered_segments.append(segment)
                 
-                # Extract message type from MSH
-                if segment_id == "MSH" and len(segment.fields) >= 9:
-                    message_type_field = segment.fields[8] if len(segment.fields) > 8 else "UNKNOWN"
-                    # Split message type (e.g., "ORU^R01" -> message_type="ORU", trigger_event="R01")
+                # Extract message type from MSH-9 (HL7 uses the field separator as MSH-1)
+                if segment_id == "MSH" and len(segment.fields) >= 8:
+                    message_type_field = segment.fields[7]
                     if "^" in message_type_field:
                         parts = message_type_field.split("^")
                         message_type = parts[0] if len(parts) > 0 else "UNKNOWN"
@@ -112,7 +115,7 @@ class HL7Parser:
                     else:
                         message_type = message_type_field
                         trigger_event = "UNKNOWN"
-                    message_structure = segment.fields[10] if len(segment.fields) > 10 else "UNKNOWN"
+                    message_structure = segment.fields[9] if len(segment.fields) > 9 else "UNKNOWN"
                     
             except Exception as e:
                 errors.append({
@@ -127,6 +130,7 @@ class HL7Parser:
             trigger_event=trigger_event,
             message_structure=message_structure,
             segments=segments,
+            ordered_segments=ordered_segments,
             raw=message,
             errors=errors
         )
@@ -139,15 +143,13 @@ class HL7Parser:
     
     def _parse_segment(self, segment_str: str) -> HL7Segment:
         """Parse a single segment string"""
-        # First 3 characters are segment ID
         segment_id = segment_str[:3]
+        fields = []
         
-        # Split fields
         if len(segment_str) > 3:
-            fields_str = segment_str[3:]
-            fields = fields_str.split(self.field_separator)
-        else:
-            fields = []
+            # Fields start after the segment ID and the field separator
+            fields_str = segment_str[4:] if len(segment_str) > 4 else ""
+            fields = fields_str.split(self.field_separator) if fields_str else []
         
         return HL7Segment(
             segment_id=segment_id,
@@ -155,36 +157,44 @@ class HL7Parser:
             raw=segment_str
         )
     
-    def get_field(self, segment: HL7Segment, field_index: int, component_index: int = None) -> Optional[str]:
+    def get_field(self, segment: HL7Segment, field_index: int, component_index: int = None, subcomponent_index: int = None) -> Optional[str]:
         """
-        Get a field from a segment, optionally a specific component.
+        Get a field from a segment, optionally a specific component or subcomponent.
         
         Args:
             segment: HL7Segment object
-            field_index: 0-based field index (field 1 is index 0 after segment ID)
+            field_index: 1-based HL7 field index after the segment ID
             component_index: Optional component index within the field
+            subcomponent_index: Optional subcomponent index within the component
             
         Returns:
-            Field value or component value, or None if not found
+            Field value or nested component/subcomponent value, or None if not found
         """
-        # Adjust for segment ID (field 1 in HL7 is index 0 in fields list)
         actual_index = field_index - 1
-        
         if actual_index < 0 or actual_index >= len(segment.fields):
             return None
         
         field_value = segment.fields[actual_index]
-        
-        if field_value == "" or field_value is None:
+        if not field_value:
             return None
         
-        if component_index is not None:
-            components = field_value.split(self.component_separator)
-            if component_index < len(components):
-                return components[component_index]
+        if component_index is None:
+            return field_value
+        
+        components = field_value.split(self.component_separator)
+        if component_index < 0 or component_index >= len(components):
+            return None
+        component_value = components[component_index]
+        if component_value == "":
             return None
         
-        return field_value
+        if subcomponent_index is None:
+            return component_value
+        
+        subcomponents = component_value.split(self.subcomponent_separator)
+        if subcomponent_index < 0 or subcomponent_index >= len(subcomponents):
+            return None
+        return subcomponents[subcomponent_index] or None
     
     def get_repeated_fields(self, segment: HL7Segment, field_index: int) -> List[str]:
         """Get repeated fields from a segment"""
@@ -250,6 +260,74 @@ class HL7Parser:
             return f"{year}-{month}-{day}"
         except Exception:
             return None
+
+    def parse_hl7_time(self, hl7_time: str) -> Optional[str]:
+        """Convert HL7 time format (HHMMSS[.S+] ) to ISO time string"""
+        if not hl7_time or len(hl7_time) < 2:
+            return None
+        try:
+            hour = hl7_time[0:2]
+            minute = hl7_time[2:4] if len(hl7_time) >= 4 else "00"
+            second = hl7_time[4:6] if len(hl7_time) >= 6 else "00"
+            time_str = f"{hour}:{minute}:{second}"
+            if len(hl7_time) > 6 and hl7_time[6] == ".":
+                fraction = hl7_time[7:]
+                time_str += f".{fraction}"
+            return time_str
+        except Exception:
+            return None
+
+    def split_components(self, value: Optional[str]) -> List[str]:
+        """Split a field into HL7 components without raising on empty values."""
+        if value is None:
+            return []
+        return value.split(self.component_separator)
+
+    def split_subcomponents(self, value: Optional[str]) -> List[str]:
+        """Split a component into HL7 subcomponents safely."""
+        if value is None:
+            return []
+        return value.split(self.subcomponent_separator)
+
+    def parse_codeable_concept(self, hl7_value: Optional[str], default_system: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Convert HL7 CE/CWE/CNE coded values into FHIR CodeableConcept."""
+        if not hl7_value:
+            return None
+        components = self.split_components(hl7_value)
+        if not components:
+            return None
+        code = components[0] or None
+        display = components[1] if len(components) > 1 and components[1] else None
+        system_label = components[2] if len(components) > 2 and components[2] else None
+        
+        system_map = {
+            "LN": "http://loinc.org",
+            "L": "http://loinc.org",
+            "SNM": "http://snomed.info/sct",
+            "SCT": "http://snomed.info/sct",
+            "RXNORM": "http://www.nlm.nih.gov/research/umls/rxnorm",
+            "ICD-10": "http://hl7.org/fhir/sid/icd-10"
+        }
+        system = system_map.get(system_label, default_system)
+        if not code and not display:
+            return None
+        coding = {}
+        if code:
+            coding["code"] = code
+        if system:
+            coding["system"] = system
+        if display:
+            coding["display"] = display
+        concept = {"coding": [coding]} if coding else None
+        if concept and display:
+            concept["text"] = display
+        return concept
+
+    def parse_first_component(self, hl7_value: Optional[str]) -> Optional[str]:
+        """Extract the first component from a caret-delimited HL7 value."""
+        if not hl7_value:
+            return None
+        return self.split_components(hl7_value)[0] if self.split_components(hl7_value) else None
 
 
 def parse_hl7_message(message: str) -> HL7Message:

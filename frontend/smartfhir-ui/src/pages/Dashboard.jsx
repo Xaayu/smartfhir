@@ -1588,17 +1588,134 @@ function ApiCenter({ profile, setProfile, onNotify, onClose, isMobile }) {
   );
 }
 
+const DEFAULT_HL7_MESSAGE = `MSH|^~\\&|ADT1|MCM|LABADT|MCM|202401011200||ADT^A01|MSG00001|P|2.5
+PID|1||12345||Doe^John||19800101|M
+PV1|1|I|2000^209^01||||001^ADMITTING|...`;
+
+function HL7ConverterPanel({ colors, isMobile, onNotify, hl7Message, setHl7Message, output, setOutput, isConverting, setIsConverting, error, setError }) {
+  async function handleConvert() {
+    if (!hl7Message.trim()) {
+      setError("Paste an HL7 message to convert.");
+      return;
+    }
+
+    setIsConverting(true);
+    setError("");
+
+    try {
+      const apiKey = localStorage.getItem("smartfhirApiKey");
+      const res = await fetch(`${API_BASE}/api/hl7-to-fhir`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { "X-API-Key": apiKey } : {}),
+        },
+        body: JSON.stringify({ hl7_message: hl7Message.trim(), explain_errors: true }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "HL7 conversion failed");
+      }
+
+      setOutput(data);
+      onNotify?.("HL7 conversion completed", "success");
+    } catch (e) {
+      setError(e.message || "Unexpected error while converting HL7");
+      onNotify?.("HL7 conversion failed", "error");
+    } finally {
+      setIsConverting(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "grid", gap: 16, height: isMobile ? "auto" : "100%" }}>
+      <div style={{ ...getPanelStyle(colors), display: "grid", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <div>
+            <div style={{ color: colors.text, fontSize: isMobile ? 20 : 24, fontWeight: 800 }}>HL7 Convertor</div>
+            <div style={{ color: colors.textDim, fontSize: isMobile ? 12 : 13, marginTop: 4 }}>
+              Convert HL7 v2 messages to FHIR resources with the backend pipeline.
+            </div>
+          </div>
+          <button onClick={handleConvert} disabled={isConverting} style={{
+            ...getButtonStyle(colors, "primary"),
+            opacity: isConverting ? 0.8 : 1,
+            cursor: isConverting ? "wait" : "pointer",
+          }}>
+            {isConverting ? "Converting..." : "Convert"}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", height: "100%" }}>
+        <div style={{ ...getPanelStyle(colors), display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={getLabelStyle(colors)}>HL7 Message</div>
+          <textarea
+            value={hl7Message}
+            onChange={(e) => setHl7Message(e.target.value)}
+            rows={isMobile ? 12 : 18}
+            style={{
+              flex: 1,
+              minHeight: isMobile ? 220 : 320,
+              resize: "vertical",
+              background: colors.bg,
+              color: colors.text,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 10,
+              padding: 12,
+              fontFamily: "monospace",
+              fontSize: 13,
+            }}
+            placeholder="Paste your HL7 message here"
+          />
+          {error ? <div style={{ color: colors.error, fontSize: 13 }}>{error}</div> : null}
+        </div>
+
+        <div style={{ ...getPanelStyle(colors), display: "flex", flexDirection: "column", gap: 10, overflow: isMobile ? "visible" : "auto", height: isMobile ? "auto" : "100%" }}>
+          <div style={getLabelStyle(colors)}>FHIR Output</div>
+          {output ? (
+            <pre style={{
+              margin: 0,
+              background: colors.bg,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 10,
+              padding: 12,
+              color: colors.text,
+              fontSize: 12,
+              lineHeight: 1.5,
+              overflow: "auto",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+            }}>
+              {JSON.stringify(output, null, 2)}
+            </pre>
+          ) : (
+            <div style={{ color: colors.textDim, fontSize: 13, lineHeight: 1.6 }}>
+              Your converted FHIR bundle and validation details will appear here after you run the conversion.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const { colors, toggleTheme, theme } = useTheme();
   const [activeResource, setActiveResource] = useState("Patient");
   const [activeSection, setActiveSection] = useState("workspace");
+  const [activeNav, setActiveNav] = useState("fhir");
   const [apiProfile, setApiProfile] = useState(loadApiProfile);
   const [runStatus, setRunStatus] = useState({});
   const [revalidateSignal, setRevalidateSignal] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const notificationDuration = 4000;
   const [isMobile, setIsMobile] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [hl7Message, setHl7Message] = useState(DEFAULT_HL7_MESSAGE);
+  const [hl7Output, setHl7Output] = useState(null);
+  const [hl7Error, setHl7Error] = useState("");
+  const [isHl7Converting, setIsHl7Converting] = useState(false);
 
   useEffect(() => {
     if (revalidateSignal > 0) {
@@ -1679,79 +1796,116 @@ function AppContent() {
 
   const navigate = useNavigate();
   const RESOURCES = ["Patient", "Observation", "Condition", "Encounter", "MedicationRequest", "Bundle"];
+  const NAV_ITEMS = [
+    { id: "fhir", label: "FHIR Resources", icon: "🧬" },
+    { id: "hl7", label: "HL7 Convertor", icon: "🔁" },
+  ];
 
   return (
     <div style={{
-      minHeight: "100vh", background: colors.bg,
+      height: isMobile ? "auto" : "100vh", background: colors.bg,
       color: colors.text, fontFamily: "'Inter', system-ui, sans-serif",
-      display: "flex", flexDirection: "column",
+      display: "flex", flexDirection: isMobile ? "column" : "row",
       transition: "background 0.3s ease, color 0.3s ease",
+      overflow: isMobile ? "visible" : "hidden",
     }}>
-      {/* Header */}
-      <div style={{
-        borderBottom: `1px solid ${colors.border}`,
-        padding: isMobile ? "0 16px" : "0 32px",
-        display: "flex", alignItems: "center", gap: isMobile ? 12 : 24,
-        minHeight: 56,
-        flexWrap: "wrap",
-        position: "relative",
+      <aside style={{
+        width: isMobile ? "0" : 250,
+        position: isMobile ? "relative" : "sticky",
+        top: 0,
+        height: isMobile ? "auto" : "100vh",
+        borderRight: isMobile ? "none" : `1px solid ${colors.border}`,
+        borderBottom: isMobile ? `1px solid ${colors.border}` : "none",
+        background: colors.surface,
+        paddingTop: isMobile ? "16px" : "24px",
+        paddingRight: isMobile ? "16px" : "18px",
+        paddingLeft: isMobile ? "16px" : "18px",
+        display: isMobile ? "none" : "flex",
+        flexDirection: "column",
+        gap: 16,
+        minHeight: 0,
+        overflowY: "auto",
+        paddingBottom: 48,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{
-            width: 28, height: 28, borderRadius: 6,
+            width: 32, height: 32, borderRadius: 8,
             background: colors.accent,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 14, fontWeight: 700, color: "#fff",
-          }}>S</div>
-          <span style={{ fontWeight: 700, fontSize: isMobile ? 14 : 16, letterSpacing: "-0.02em" }}>MedTechTools</span>
-          {!isMobile && <Badge color={colors.accent} colors={colors}>MVP</Badge>}
+            fontSize: 18, fontWeight: 800, color: "#fff",
+            letterSpacing: 0,
+          }}>+</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>MedTechTools</div>
+            <div style={{ color: colors.textDim, fontSize: 12 }}>Dashboard</div>
+          </div>
         </div>
 
-        {/* Mobile menu button */}
-        {isMobile && (
-          <button onClick={() => setShowMobileMenu(!showMobileMenu)} style={{
-            marginLeft: "auto",
-            background: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 8,
-            padding: "8px 12px",
-            cursor: "pointer",
-            fontSize: 20,
-          }}>
-            {showMobileMenu ? "✕" : "☰"}
-          </button>
-        )}
+        <div style={{ display: "grid", gap: 8 }}>
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveNav(item.id);
+                setActiveSection("workspace");
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                borderRadius: 10,
+                border: activeNav === item.id ? `1px solid ${colors.accent}44` : `1px solid ${colors.border}`,
+                background: activeNav === item.id ? colors.accentDim : colors.bg,
+                color: activeNav === item.id ? colors.accent : colors.text,
+                padding: "10px 12px",
+                cursor: "pointer",
+                fontWeight: activeNav === item.id ? 700 : 600,
+                textAlign: "left",
+              }}
+            >
+              <span style={{ fontSize: 15 }}>{item.icon}</span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
 
-        {/* Resource tabs - Desktop */}
-        {!isMobile && (
-          <div style={{
-            display: "flex", gap: 2, marginLeft: 16,
-            background: colors.surface, borderRadius: 8, padding: 3,
-            border: `1px solid ${colors.border}`,
-          }}>
-            {RESOURCES.map(r => (
-              <button key={r} onClick={() => { setActiveResource(r); setActiveSection("workspace"); }} style={{
-                background: activeResource === r ? colors.accentDim : "none",
-                border: activeResource === r ? `1px solid ${colors.accent}44` : "1px solid transparent",
-                color: activeResource === r ? colors.accent : colors.muted,
-                borderRadius: 6, padding: "5px 16px",
-                cursor: "pointer", fontSize: 13, fontWeight: activeResource === r ? 600 : 400,
-                transition: "all 0.3s ease",
-              }}>
-                <span style={{display: "inline-flex", alignItems: "center", gap: 8}}>
-                  <span>{r}</span>
-                  {runStatus[r] && (
-                    <span style={{width: 8, height: 8, borderRadius: "50%", background: colors.success, display: "inline-block"}} />
-                  )}
-                </span>
-              </button>
-            ))}
+        <div style={{ position: "sticky", bottom: 24, display: "grid", gap: 8, marginTop: "auto", paddingBottom: 8 }}>
+          <button onClick={() => { setActiveSection("api"); setRevalidateSignal(0); }} style={{
+            ...getButtonStyle(colors, "secondary"),
+            background: activeSection === "api" ? colors.accentDim : colors.surface,
+            border: `1px solid ${activeSection === "api" ? colors.accent + "66" : colors.border}`,
+            color: activeSection === "api" ? colors.accent : colors.text,
+          }}>API Center</button>
+          <button onClick={logout} style={{
+            ...getButtonStyle(colors, "primary"),
+            background: colors.error,
+            border: `1px solid ${colors.error}`,
+          }}>Logout</button>
+        </div>
+      </aside>
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+        <div style={{
+          flexShrink: 0,
+          position: isMobile ? "sticky" : "static",
+          top: isMobile ? 0 : "auto",
+          zIndex: isMobile ? 20 : "auto",
+          background: isMobile ? colors.bg : "transparent",
+          borderBottom: `1px solid ${colors.border}`,
+          padding: isMobile ? "14px 16px" : "14px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: isMobile ? 16 : 18 }}>{activeNav === "hl7" ? "HL7 Convertor" : "FHIR Resources"}</div>
+            <div style={{ color: colors.textDim, fontSize: isMobile ? 12 : 13, marginTop: 2 }}>
+              {activeNav === "hl7" ? "Convert HL7 messages into FHIR bundles from the backend service." : "Map and validate your FHIR resources with the built-in pipeline."}
+            </div>
           </div>
-        )}
-
-        {/* Desktop action buttons */}
-        {!isMobile && (
-          <div style={{ marginLeft: "auto", color: colors.muted, fontSize: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button onClick={toggleTheme} style={{
               background: colors.surface,
               border: `1px solid ${colors.border}`,
@@ -1759,153 +1913,197 @@ function AppContent() {
               padding: "8px 12px",
               cursor: "pointer",
               transition: "all 0.3s ease",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
             }}>
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
-            <button onClick={() => { setActiveSection("api"); setRevalidateSignal(0); }} style={{
-              ...getButtonStyle(colors, "secondary"),
-              background: activeSection === "api" ? colors.accentDim : colors.surface,
-              border: `1px solid ${activeSection === "api" ? colors.accent + "66" : colors.border}`,
-              color: activeSection === "api" ? colors.accent : colors.text,
-              fontWeight: 600,
-            }}>API Center</button>
-            <button onClick={() => { notify('Revalidating all resources', 'info'); setRevalidateSignal(s => s + 1); }} style={{
+            <button onClick={() => { notify("Revalidating all resources", "info"); setRevalidateSignal(s => s + 1); }} style={{
               ...getButtonStyle(colors, "secondary"),
             }}>Revalidate All</button>
-            <button onClick={logout} style={{
-              ...getButtonStyle(colors, "primary"),
-              background: colors.error,
-              border: `1px solid ${colors.error}`,
-            }}>Logout</button>
-          </div>
-        )}
-      </div>
-
-      {/* Mobile menu */}
-      {isMobile && showMobileMenu && (
-        <div style={{
-          background: colors.surface,
-          borderBottom: `1px solid ${colors.border}`,
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-        }}>
-          {/* Resource tabs - Mobile */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: 8,
-          }}>
-            {RESOURCES.map(r => (
-              <button key={r} onClick={() => { setActiveResource(r); setActiveSection("workspace"); setShowMobileMenu(false); }} style={{
-                background: activeResource === r ? colors.accentDim : colors.bg,
-                border: activeResource === r ? `1px solid ${colors.accent}44` : `1px solid ${colors.border}`,
-                color: activeResource === r ? colors.accent : colors.text,
-                borderRadius: 6, padding: "10px",
-                cursor: "pointer", fontSize: 12, fontWeight: activeResource === r ? 600 : 400,
-                transition: "all 0.3s ease",
-              }}>
-                <span style={{display: "inline-flex", alignItems: "center", gap: 8}}>
-                  <span>{r}</span>
-                  {runStatus[r] && (
-                    <span style={{width: 6, height: 6, borderRadius: "50%", background: colors.success, display: "inline-block"}} />
-                  )}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Mobile action buttons */}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={toggleTheme} style={{
-              background: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 8,
-              padding: "8px 12px",
-              cursor: "pointer",
-              flex: 1,
-            }}>
-              {theme === "dark" ? "☀️" : "🌙"}
-            </button>
-            <button onClick={() => { setActiveSection("api"); setRevalidateSignal(0); setShowMobileMenu(false); }} style={{
-              ...getButtonStyle(colors, "secondary"),
-              flex: 1,
-            }}>API Center</button>
-            <button onClick={() => { notify('Revalidating all resources', 'info'); setRevalidateSignal(s => s + 1); }} style={{
-              ...getButtonStyle(colors, "secondary"),
-              flex: 1,
-            }}>Revalidate</button>
-            <button onClick={logout} style={{
-              ...getButtonStyle(colors, "primary"),
-              background: colors.error,
-              border: `1px solid ${colors.error}`,
-              flex: 1,
-            }}>Logout</button>
           </div>
         </div>
-      )}
 
-      {/* Workflow hint */}
-      {activeSection !== "api" && (
-        <div style={{
-          borderBottom: `1px solid ${colors.border}`,
-          padding: isMobile ? "12px 16px" : "16px 32px",
-          background: colors.surface,
-          display: "grid",
-          gap: 12,
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-            {WORKFLOW_STEPS.map((step, index) => (
-              <div key={step.title} style={{
-                flex: isMobile ? "1 1 100%" : "1 1 140px",
-                minWidth: isMobile ? "auto" : 140,
-                background: colors.bg,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 8,
-                padding: isMobile ? "8px 10px" : "10px 12px",
-                boxShadow: `0 2px 6px ${colors.shadow}`,
-                transition: "all 0.3s ease",
-              }}>
-                <div style={{ color: colors.accent, fontSize: isMobile ? 9 : 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
-                  {`Step ${index + 1}`}
+        {isMobile && (
+          <div style={{
+            flexShrink: 0,
+            position: "sticky",
+            top: 72,
+            zIndex: 15,
+            borderBottom: `1px solid ${colors.border}`,
+            padding: "12px 16px",
+            background: colors.surface,
+            display: "grid",
+            gap: 14,
+            boxShadow: `0 10px 30px ${colors.shadowLight}`,
+            marginBottom: 8,
+          }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              {NAV_ITEMS.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveNav(item.id); setActiveSection("workspace"); }}
+                  style={{
+                    flex: 1,
+                    borderRadius: 10,
+                    border: activeNav === item.id ? `1px solid ${colors.accent}44` : `1px solid ${colors.border}`,
+                    background: activeNav === item.id ? colors.accentDim : colors.bg,
+                    color: activeNav === item.id ? colors.accent : colors.text,
+                    padding: "10px 12px",
+                    cursor: "pointer",
+                    fontWeight: activeNav === item.id ? 700 : 600,
+                    textAlign: "center",
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            {activeNav !== "hl7" && activeSection !== "api" && (
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ display: "grid", gap: 6 }}>
+                  <label style={{ color: colors.textDim, fontSize: 12, fontWeight: 700 }}>Resource</label>
+                  <select
+                    value={activeResource}
+                    onChange={(e) => setActiveResource(e.target.value)}
+                    style={{
+                      width: "100%",
+                      borderRadius: 10,
+                      border: `1px solid ${colors.border}`,
+                      background: colors.surface,
+                      color: colors.text,
+                      padding: "12px 14px",
+                      fontSize: 14,
+                    }}
+                  >
+                    {RESOURCES.map(resource => (
+                      <option key={resource} value={resource}>{resource}</option>
+                    ))}
+                  </select>
                 </div>
-                <div style={{ color: colors.text, fontSize: isMobile ? 12 : 13, fontWeight: 700, marginBottom: 4 }}>
-                  {step.title}
-                </div>
-                <div style={{ color: colors.textDim, fontSize: isMobile ? 10 : 11, lineHeight: 1.4 }}>
-                  {step.subtitle}
+                <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 12, display: "grid", gap: 10 }}>
+                  {WORKFLOW_STEPS.map((step, index) => (
+                    <div key={step.title} style={{ display: "grid", gap: 4 }}>
+                      <div style={{ color: colors.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                        Step {index + 1}
+                      </div>
+                      <div style={{ color: colors.text, fontSize: 14, fontWeight: 700 }}>{step.title}</div>
+                      <div style={{ color: colors.textDim, fontSize: 12, lineHeight: 1.5 }}>{step.subtitle}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* Main content */}
-      <div style={{ flex: 1, padding: isMobile ? "16px" : "32px", overflow: "hidden" }}>
-        <div style={{ display: activeSection === "api" ? "block" : "none", height: "100%" }}>
-          <ApiCenter profile={apiProfile} setProfile={setApiProfile} onNotify={notify} onClose={() => { setActiveSection("workspace"); setRevalidateSignal(0); }} isMobile={isMobile} />
-        </div>
-        <div style={{ display: activeSection === "api" ? "none" : "block", height: "100%" }}>
-          {RESOURCES.map(r => (
-            <div key={r} style={{ display: activeResource === r ? "block" : "none", height: "100%" }}>
-              {r === "Bundle" ? (
-                <BundlePanel onNotify={notify} isMobile={isMobile} />
-              ) : (
-                <ResourcePanel
-                  type={r}
-                  onRun={(resName, has) => setRunStatus(prev => ({ ...prev, [resName]: has }))}
-                  revalidateSignal={revalidateSignal}
-                  onNotify={notify}
-                  isMobile={isMobile}
-                />
-              )}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button onClick={() => { setActiveSection("api"); setRevalidateSignal(0); }} style={{
+                ...getButtonStyle(colors, "secondary"),
+                flex: 1,
+              }}>API Center</button>
+              <button onClick={logout} style={{
+                ...getButtonStyle(colors, "primary"),
+                background: colors.error,
+                border: `1px solid ${colors.error}`,
+                flex: 1,
+              }}>Logout</button>
             </div>
-          ))}
+          </div>
+        )}
+
+        {!isMobile && activeNav !== "hl7" && activeSection !== "api" && (
+          <div style={{
+            flexShrink: 0,
+            borderBottom: `1px solid ${colors.border}`,
+            padding: isMobile ? "12px 16px" : "16px 24px",
+            background: colors.surface,
+            display: "grid",
+            gap: 12,
+          }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {RESOURCES.map(r => (
+                <button key={r} onClick={() => { setActiveResource(r); setActiveSection("workspace"); }} style={{
+                  background: activeResource === r ? colors.accentDim : colors.bg,
+                  border: activeResource === r ? `1px solid ${colors.accent}44` : `1px solid ${colors.border}`,
+                  color: activeResource === r ? colors.accent : colors.muted,
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: activeResource === r ? 700 : 500,
+                }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <span>{r}</span>
+                    {runStatus[r] && (
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: colors.success, display: "inline-block" }} />
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+              {WORKFLOW_STEPS.map((step, index) => (
+                <div key={step.title} style={{
+                  flex: isMobile ? "1 1 100%" : "1 1 140px",
+                  minWidth: isMobile ? "auto" : 140,
+                  background: colors.bg,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 8,
+                  padding: isMobile ? "8px 10px" : "10px 12px",
+                  boxShadow: `0 2px 6px ${colors.shadow}`,
+                }}>
+                  <div style={{ color: colors.accent, fontSize: isMobile ? 9 : 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
+                    {`Step ${index + 1}`}
+                  </div>
+                  <div style={{ color: colors.text, fontSize: isMobile ? 12 : 13, fontWeight: 700, marginBottom: 4 }}>
+                    {step.title}
+                  </div>
+                  <div style={{ color: colors.textDim, fontSize: isMobile ? 10 : 11, lineHeight: 1.4 }}>
+                    {step.subtitle}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: isMobile ? "12px 16px 24px" : "24px" }}>
+          <div style={{ display: activeSection === "api" ? "block" : "none", minHeight: 0 }}>
+            <ApiCenter profile={apiProfile} setProfile={setApiProfile} onNotify={notify} onClose={() => { setActiveSection("workspace"); setRevalidateSignal(0); }} isMobile={isMobile} />
+          </div>
+          <div style={{ display: activeSection === "api" ? "none" : "block", height: "100%" }}>
+            {activeNav === "hl7" ? (
+              <HL7ConverterPanel
+                colors={colors}
+                isMobile={isMobile}
+                onNotify={notify}
+                hl7Message={hl7Message}
+                setHl7Message={setHl7Message}
+                output={hl7Output}
+                setOutput={setHl7Output}
+                isConverting={isHl7Converting}
+                setIsConverting={setIsHl7Converting}
+                error={hl7Error}
+                setError={setHl7Error}
+              />
+            ) : (
+              RESOURCES.map(r => (
+                <div key={r} style={{ display: activeResource === r ? "block" : "none", height: "100%" }}>
+                  {r === "Bundle" ? (
+                    <BundlePanel onNotify={notify} isMobile={isMobile} />
+                  ) : (
+                    <ResourcePanel
+                      type={r}
+                      onRun={(resName, has) => setRunStatus(prev => ({ ...prev, [resName]: has }))}
+                      revalidateSignal={revalidateSignal}
+                      onNotify={notify}
+                      isMobile={isMobile}
+                    />
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+          <Notifications items={notifications} remove={removeNotification} />
         </div>
-        <Notifications items={notifications} remove={removeNotification} />
       </div>
     </div>
   );

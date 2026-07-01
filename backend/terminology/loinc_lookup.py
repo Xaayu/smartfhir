@@ -1,9 +1,10 @@
 import httpx
 import json
 import os
+from api_key_manager import store_path
 
 LOINC_API = "https://clinicaltables.nlm.nih.gov/api/loinc_items/v3/search"
-CACHE_PATH = "store/loinc_cache.json"
+CACHE_PATH = store_path("loinc_cache.json")
 LOOKUP_TIMEOUT_SECONDS = float(os.getenv("TERMINOLOGY_LOOKUP_TIMEOUT_SECONDS", "2.0"))
 
 COMMON_LOINC = {

@@ -4,9 +4,17 @@ services:
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    disk:
+      name: smartfhir-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: USE_POSTGRES
         value: false
+      - key: SMARTFHIR_STORE_DIR
+        value: /var/data/store
+      - key: API_KEY_PEPPER
+        sync: false
       - key: GOOGLE_API_KEY
         sync: false
       - key: JWT_SECRET
