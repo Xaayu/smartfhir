@@ -54,6 +54,7 @@ from validators.medication_validator import (
 )
 
 from hl7_converter import convert_hl7_to_fhir
+import logging
 
 
 # 2. Store manager functions (ADD HERE)
@@ -71,6 +72,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Setup logging for startup diagnostics
+logger = logging.getLogger("smartfhir")
+logging.basicConfig(level=logging.INFO)
+
 # Initialize database on startup
 @app.on_event("startup")
 async def startup_event():
@@ -80,6 +85,12 @@ async def startup_event():
         print("Using PostgreSQL storage for API keys and usage.")
     else:
         print(f"Using local file storage for API keys and usage: {store_dir()}")
+    # Log resolved CORS origins for debugging deployed environment
+    try:
+        cors_origins = get_cors_origins()
+        logger.info(f"Resolved CORS origins: {cors_origins}")
+    except Exception as e:
+        logger.exception("Error resolving CORS origins on startup")
 
 # Note: OAuth routes removed for simplified email-only flow
 
@@ -117,6 +128,7 @@ EXEMPT_PATHS = {
     "/admin/feedback",
     "/admin/delete-user",
     "/api/hl7-to-fhir",
+    "/_debug_cors",
     # OAuth endpoints removed; simplified email registration used instead
 }
 
@@ -201,6 +213,12 @@ def load_list_store(path: str) -> list:
             except json.JSONDecodeError:
                 pass
     return []
+
+
+@app.get("/_debug_cors")
+def debug_cors():
+    """Simple diagnostic endpoint that returns the resolved CORS origins."""
+    return {"allowed_origins": get_cors_origins()}
 
 
 def save_list_store(path: str, data: list):
