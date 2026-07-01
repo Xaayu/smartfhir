@@ -13,6 +13,8 @@ services:
         value: false
       - key: SMARTFHIR_STORE_DIR
         value: /var/data/store
+      - key: FRONTEND_ORIGINS
+        value: "https://medtechtools.vercel.app,https://medtechtools-ghfufir6j-smart-fhir.vercel.app,https://medtechtools-f45oo20ri-smart-fhir.vercel.app,http://localhost:3000,http://localhost:5173"
       - key: API_KEY_PEPPER
         sync: false
       - key: GOOGLE_API_KEY
