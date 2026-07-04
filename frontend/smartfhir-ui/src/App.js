@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 
 import LandingPage from "./pages/LandingPage";
 import ApiKeyPage from "./pages/ApiKeyPage";
@@ -53,6 +54,7 @@ function App() {
   return (
     <BrowserRouter>
       <AppRoutes />
+      <Analytics />
     </BrowserRouter>
   );
 }
