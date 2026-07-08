@@ -1,11 +1,30 @@
 # MedTechTools
 
-MedTechTools is a FastAPI + React app for mapping, validating, explaining, and auto-fixing common FHIR resources.
+MedTechTools is a FastAPI + React platform for healthcare teams that need to validate, explain, and fix FHIR resources faster.
 
-## Structure
+## Why this exists
 
-- `backend/` - FastAPI API, validators, terminology lookup, API key management
-- `frontend/smartfhir-ui/` - React landing page and UI
+FHIR integration work slows down when incoming data uses inconsistent field names, invalid enums, missing terminology, and unclear business rules. MedTechTools helps turn messy source data into clean, explainable FHIR output with one API call.
+
+## Who it helps
+
+- healthcare developers
+- integration engineers
+- health-tech startups
+- data teams building EHR workflows
+
+## What it does
+
+- smart field mapping for common healthcare data aliases
+- validation with human-readable explanations
+- automatic fixes for common FHIR issues
+- terminology lookups for LOINC, SNOMED CT, and RxNorm
+- quality scoring and bundle generation for patient-focused workflows
+
+## Project structure
+
+- backend/ - FastAPI API, validators, terminology lookup, API key management
+- frontend/smartfhir-ui/ - React landing page and UI
 
 ## Backend
 
@@ -17,13 +36,13 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Create `.env` from the example before using AI explanations:
+Create .env from the example before using AI explanations:
 
 ```bash
 copy ..\.env.example ..\.env
 ```
 
-Then set `GEMINI_API_KEY`.
+Then set GEMINI_API_KEY.
 
 ### Persistent API key storage
 
@@ -36,7 +55,7 @@ API_KEY_PEPPER="long-random-secret"
 ADMIN_TOKEN="your-founder-admin-token"
 ```
 
-Mount a Render Disk at `/var/data`. This keeps API keys valid across deploys and restarts while Supabase is unavailable. If `SMARTFHIR_STORE_DIR` is not set, the backend falls back to `backend/store/`, which is only safe for local development.
+Mount a Render Disk at /var/data. This keeps API keys valid across deploys and restarts while Supabase is unavailable. If SMARTFHIR_STORE_DIR is not set, the backend falls back to backend/store/, which is only safe for local development.
 
 ### Supabase Postgres usage tracking
 
@@ -44,7 +63,7 @@ Supabase Postgres can also be used for API keys, rate limits, usage logging, and
 
 1. Create a Supabase project.
 2. Open the Supabase SQL editor.
-3. Run `backend/supabase_schema.sql`.
+3. Run backend/supabase_schema.sql.
 4. Set these environment variables:
 
 ```bash
@@ -54,7 +73,7 @@ API_KEY_PEPPER="long-random-secret"
 ADMIN_TOKEN="your-founder-admin-token"
 ```
 
-If `USE_POSTGRES=true` but `SUPABASE_DB_URL` is not set, the backend falls back to JSON file storage.
+If USE_POSTGRES=true but SUPABASE_DB_URL is not set, the backend falls back to JSON file storage.
 
 Founder analytics are available at:
 
@@ -76,10 +95,16 @@ npm install
 npm start
 ```
 
-The frontend expects the backend at `http://localhost:8000`.
+The frontend expects the backend at http://localhost:8000.
+
+## Try it
+
+- request a free API key
+- submit a sample patient payload
+- review the validation, explanation, and auto-fix output
 
 ## Notes
 
-- Do not commit `.env`, `node_modules`, build output, Python caches, or runtime JSON stores.
-- `backend/store/` is kept with `.gitkeep`; JSON files are generated locally at runtime.
+- do not commit .env, node_modules, build output, Python caches, or runtime JSON stores
+- backend/store/ is kept with .gitkeep; JSON files are generated locally at runtime
 

@@ -1,6 +1,7 @@
 from fhir.resources.observation import Observation
 from pydantic import ValidationError
 from terminology.loinc_lookup import lookup_loinc, get_observation_category
+from terminology.terminology_utils import normalize_code_input, lookup_by_system, extract_primary_coding
 from api_key_manager import store_path
 import json
 import os
@@ -167,8 +168,28 @@ def validate_observation(data: dict) -> dict:
             "suggested_fix": "Add a test name or LOINC code."
         })
     else:
-        # Look up LOINC code
-        loinc_result = lookup_loinc(str(code_display))
+        system = None
+        if isinstance(data.get("code"), dict):
+            primary_coding = extract_primary_coding(data["code"])
+            if primary_coding:
+                system = primary_coding.get("system")
+                code_display = normalize_code_input(primary_coding) or code_display
+
+        if system:
+            system_lookup = lookup_by_system(system, code_display)
+            if system_lookup is not None:
+                loinc_result = system_lookup
+                if not loinc_result["found"]:
+                    warnings.append({
+                        "field": "code",
+                        "message": f"Invalid LOINC code '{code_display}' for system '{system}'.",
+                        "suggestion": "Verify the LOINC code or use a supported code system."
+                    })
+            else:
+                loinc_result = lookup_loinc(str(code_display))
+        else:
+            loinc_result = lookup_loinc(str(code_display))
+
         if not loinc_result["found"]:
             warnings.append({
                 "field": "code",

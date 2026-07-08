@@ -1,6 +1,7 @@
 ﻿import json
 from validator import fix_date
 from terminology.rxnorm_lookup import lookup_rxnorm
+from terminology.terminology_utils import normalize_code_input, lookup_by_system, extract_primary_coding
 from api_key_manager import store_path
 import os
 def get_nested_value(data: dict, key: str):
@@ -103,31 +104,35 @@ def validate_medication(data: dict) -> dict:
         rxnorm_result = {"found": False, "code": None, "display": None, "system": None, "source": "none"}
     else:
         # Handle both string and CodeableConcept dict formats
-        medication_str = None
-        if isinstance(medication_name, str):
-            medication_str = medication_name
-        elif isinstance(medication_name, dict):
-            # If already a proper FHIR CodeableConcept with coding, use as-is
-            if "coding" in medication_name:
-                # Extract text for lookup
-                medication_str = medication_name.get("text")
-                if not medication_str:
-                    coding = medication_name.get("coding", [])
-                    if isinstance(coding, list) and coding:
-                        medication_str = coding[0].get("display")
+        medication_str = normalize_code_input(medication_name)
+        system = None
+        if isinstance(medication_name, dict):
+            primary_coding = extract_primary_coding(medication_name)
+            if primary_coding:
+                system = primary_coding.get("system")
+                medication_str = normalize_code_input(primary_coding) or medication_str
+
+        if system:
+            system_lookup = lookup_by_system(system, medication_str)
+            if system_lookup is not None:
+                rxnorm_result = system_lookup
+                if not rxnorm_result.get("found"):
+                    warnings.append({
+                        "field": "medicationCodeableConcept",
+                        "message": f"Invalid RxNorm code '{medication_str}' for system '{system}'.",
+                        "suggestion": "Verify the RxNorm code or use a supported medication coding system."
+                    })
             else:
-                medication_str = medication_name.get("text") or medication_name.get("display")
-        
-        if medication_str:
-            rxnorm_result = lookup_rxnorm(str(medication_str))
-            if not rxnorm_result.get("found"):
-                warnings.append({
-                    "field": "medicationCodeableConcept",
-                    "message": f"Could not resolve RxNorm code for '{medication_str}'.",
-                    "suggestion": "Verify medication name or provide a standard RxNorm identifier."
-                })
+                rxnorm_result = lookup_rxnorm(str(medication_str))
         else:
-            rxnorm_result = {"found": False, "code": None, "display": None, "system": None, "source": "none"}
+            rxnorm_result = lookup_rxnorm(str(medication_str))
+
+        if rxnorm_result and not rxnorm_result.get("found"):
+            warnings.append({
+                "field": "medicationCodeableConcept",
+                "message": f"Could not resolve RxNorm code for '{medication_str}'.",
+                "suggestion": "Verify medication name or provide a standard RxNorm identifier."
+            })
 
     subject = normalize_patient_reference(data.get("subject"))
     if not subject:

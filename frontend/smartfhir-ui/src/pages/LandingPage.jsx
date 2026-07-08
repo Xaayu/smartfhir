@@ -108,6 +108,14 @@ const styles = `
   }
   .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
   .hero-note { margin-top: 16px; font-size: 13px; color: var(--muted); }
+  .hero-highlights { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+  .hero-highlight {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-radius: 999px;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    color: var(--dim); font-size: 13px;
+  }
+  .hero-highlight strong { color: var(--text); font-weight: 600; }
   .hero-right { flex: 1.1; min-width: 0; }
 
   /* DEMO CARD */
@@ -192,6 +200,15 @@ const styles = `
   .section-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(28px,3vw,40px); font-weight: 700; letter-spacing: -0.02em; margin-bottom: 16px; line-height: 1.2; }
   .section-sub { font-size: 17px; color: var(--dim); max-width: 520px; line-height: 1.7; }
   .full-divider { height: 1px; background: var(--border); }
+  .benefit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 32px; }
+  .benefit-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px; transition: border-color 0.2s, transform 0.2s;
+  }
+  .benefit-card:hover { border-color: rgba(79,142,247,0.4); transform: translateY(-2px); }
+  .benefit-icon { font-size: 22px; margin-bottom: 12px; }
+  .benefit-title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .benefit-desc { font-size: 14px; color: var(--dim); line-height: 1.7; }
 
   /* HOW IT WORKS */
   .how-grid {
@@ -892,9 +909,8 @@ export default function LandingPage() {
 
   const goToApiKey = () => navigate('/api-key');
 
-  const goToDocs = () => {
-    document.querySelector('#docs')?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const goToDocs = () => navigate('/docs');
+  const goToTools = () => navigate('/tools');
 
   return (
     <>
@@ -911,6 +927,7 @@ export default function LandingPage() {
           <li><a href="#features">Features</a></li>
           <li><a href="#pricing">Pricing</a></li>
           <li><a href="#docs">Docs</a></li>
+          <li><button onClick={goToTools} style={{ background: 'transparent', border: 'none', color: 'var(--dim)', cursor: 'pointer', fontSize: '14px' }}>Tools</button></li>
         </ul>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button className="nav-cta" onClick={goToApiKey}>Get API Key →</button>
@@ -925,11 +942,11 @@ export default function LandingPage() {
             Now in public beta
           </div>
           <h1 className="hero-title fade-up fade-up-2">
-            FHIR validation<br />
-            <span className="hero-title-accent">that actually helps.</span>
+            Fix FHIR data<br />
+            <span className="hero-title-accent">before it breaks your workflow.</span>
           </h1>
           <p className="hero-sub fade-up fade-up-3">
-            Stop debugging cryptic FHIR errors at 2am. MedTechTools maps, validates, explains, and fixes your healthcare data — via one API call.
+            MedTechTools helps healthcare developers, integrators, and data teams validate, explain, and correct FHIR resources faster with one API call.
           </p>
           <div className="hero-actions fade-up fade-up-4">
             <button className="btn-primary" onClick={goToApiKey}>
@@ -938,13 +955,13 @@ export default function LandingPage() {
             <button className="btn-secondary" onClick={goToDocs}>View docs</button>
           </div>
           
-          <div style={{ marginTop: '32px', paddingTop: '32px', borderTop: '1px solid rgba(79,142,247,0.2)' }}>
-            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '16px' }}>
-              Start with your email and get an API key immediately.
-            </p>
+          <div className="hero-highlights fade-up fade-up-4">
+            <div className="hero-highlight"><span>⚡</span><span><strong>Fast setup</strong> in under 2 minutes</span></div>
+            <div className="hero-highlight"><span>🩺</span><span><strong>Built for</strong> healthcare data workflows</span></div>
+            <div className="hero-highlight"><span>✅</span><span><strong>Free tier</strong> with 500 calls/month</span></div>
           </div>
           
-          <p className="hero-note fade-up fade-up-4">Free tier includes 500 calls/month. No credit card required.</p>
+          <p className="hero-note fade-up fade-up-4">Start with your email and get an API key immediately. No credit card required.</p>
         </div>
         <div className="hero-right fade-up fade-up-3">
           <DemoCard />
@@ -961,11 +978,37 @@ export default function LandingPage() {
         ))}
       </div>
 
+      {/* BENEFITS */}
+      <div className="section">
+        <div className="section-eyebrow">Why teams use it</div>
+        <h2 className="section-title">Less manual cleanup. More reliable FHIR output.</h2>
+        <p className="section-sub">Designed for developers who want trustworthy healthcare data without spending hours debugging schema issues.</p>
+        <div className="benefit-grid">
+          <div className="benefit-card">
+            <div className="benefit-icon">🧠</div>
+            <div className="benefit-title">Understand every issue</div>
+            <div className="benefit-desc">Get plain-English explanations for invalid values, bad formats, and missing terminology.</div>
+          </div>
+          <div className="benefit-card">
+            <div className="benefit-icon">⚙️</div>
+            <div className="benefit-title">Cut the repetitive fixes</div>
+            <div className="benefit-desc">Handle common mapping and formatting problems automatically so your team can focus on integration work.</div>
+          </div>
+          <div className="benefit-card">
+            <div className="benefit-icon">📦</div>
+            <div className="benefit-title">Ship complete patient bundles</div>
+            <div className="benefit-desc">Generate patient-centered FHIR bundles in one request instead of stitching everything together manually.</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="full-divider" />
+
       {/* HOW IT WORKS */}
       <div className="section" id="how">
         <div className="section-eyebrow">How it works</div>
-        <h2 className="section-title">One API call. Everything fixed.</h2>
-        <p className="section-sub">Send your raw healthcare data. Get back a valid, explained, and corrected FHIR resource.</p>
+        <h2 className="section-title">One API call. Cleaner FHIR data.</h2>
+        <p className="section-sub">Send your raw healthcare data and get back a valid, explained, and corrected FHIR resource without manual cleanup.</p>
         <div className="how-grid">
           <div className="how-step" ref={addRef(0)}>
             <div className="how-step-num">Step 01</div>

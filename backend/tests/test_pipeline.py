@@ -120,6 +120,71 @@ class TestFullPipeline:
         assert snomed["found"] is True
         assert snomed["code"] == "44054006"
 
+    def test_condition_icd10_lookup(self, client):
+        """Condition pipeline includes ICD-10 lookup"""
+        res = client.post("/condition/map-validate", json={
+            "data": {
+                "PatientID": "P101",
+                "Diagnosis": "E11.9",
+                "Status": "active",
+                "Severity": "moderate",
+                "VerificationStatus": "confirmed"
+            },
+            "resource_type": "Condition"
+        })
+        assert res.status_code == 200
+        data = res.json()
+        icd10 = data["icd10_lookup"]
+        assert icd10["found"] is True
+        assert icd10["code"] == "E11.9"
+
+    def test_condition_icd10_lookup_for_common_diagnosis(self, client):
+        """Common diagnoses should resolve to ICD-10 codes instead of repeating the label."""
+        res = client.post("/condition/map-validate", json={
+            "data": {
+                "PatientID": "P101",
+                "Diagnosis": "Urinary Tract Infection",
+                "Status": "active",
+                "Severity": "mild",
+                "VerificationStatus": "confirmed"
+            },
+            "resource_type": "Condition"
+        })
+        assert res.status_code == 200
+        data = res.json()
+        icd10 = data["icd10_lookup"]
+        assert icd10["found"] is True
+        assert icd10["code"] == "N39.0"
+        code_codings = data["fhir_resource"].get("code", {}).get("coding", [])
+        assert any(coding.get("system") == "http://hl7.org/fhir/sid/icd-10" and coding.get("code") == "N39.0" for coding in code_codings)
+
+    def test_condition_icd10_lookup_for_clinical_edge_cases(self, client):
+        """Clinical edge-case terms should resolve to the expected ICD-10 codes."""
+        cases = [
+            ("Paralysis agitans", "G20"),
+            ("Acute appendicitis with generalized peritonitis", "K35.20"),
+            ("COPD exacerbation", "J44.1"),
+            ("Atypical chest pain", "R07.89"),
+            ("Essential hypertenstion", "I10"),
+        ]
+
+        for diagnosis, expected_code in cases:
+            res = client.post("/condition/map-validate", json={
+                "data": {
+                    "PatientID": "P101",
+                    "Diagnosis": diagnosis,
+                    "Status": "active",
+                    "Severity": "mild",
+                    "VerificationStatus": "confirmed"
+                },
+                "resource_type": "Condition"
+            })
+            assert res.status_code == 200, diagnosis
+            data = res.json()
+            icd10 = data["icd10_lookup"]
+            assert icd10["found"] is True, diagnosis
+            assert icd10["code"] == expected_code, (diagnosis, icd10)
+
     def test_medication_rxnorm_lookup(self, client):
         """Medication pipeline includes RxNorm lookup"""
         res = client.post("/medication/map-validate", json={

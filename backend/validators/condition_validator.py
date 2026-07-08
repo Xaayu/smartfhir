@@ -1,4 +1,7 @@
+import re
+from terminology.terminology_utils import extract_lookup_text, normalize_code_input, lookup_by_system, extract_primary_coding
 from terminology.snomed_lookup import lookup_snomed
+from terminology.icd10_lookup import lookup_icd10
 from validator import fix_date
 from api_key_manager import store_path
 import json
@@ -92,6 +95,7 @@ def validate_condition(data: dict) -> dict:
     errors = []
     warnings = []
     snomed_result = None
+    icd10_result = None
 
     # 1. Subject / Patient reference
     subject = data.get("subject", "")
@@ -139,8 +143,10 @@ def validate_condition(data: dict) -> dict:
         })
 
 
-    # 2. Code / SNOMED lookup
-    code_display = get_nested_value(data, "code.display") or get_nested_value(data, "code")
+    # 2. Code / terminology lookup
+    code = data.get("code")
+    code_display = normalize_code_input(code)
+
     if not code_display:
         errors.append({
             "field": "code",
@@ -149,15 +155,49 @@ def validate_condition(data: dict) -> dict:
             "fix": None,
             "message": "Missing required field 'code'.",
             "explanation": "Condition must have a code identifying the diagnosis.",
-            "suggested_fix": "Add a diagnosis name or SNOMED CT code."
+            "suggested_fix": "Add a diagnosis name, SNOMED CT code, or ICD-10 code."
         })
     else:
-        snomed_result = lookup_snomed(str(code_display))
-        if not snomed_result["found"]:
+        # If the input already includes a system/code pair, validate it by system.
+        system = None
+        if isinstance(code, dict):
+            primary_coding = extract_primary_coding(code)
+            if primary_coding:
+                system = primary_coding.get("system")
+                code_display = normalize_code_input(primary_coding) or code_display
+
+        if system:
+            system_lookup = lookup_by_system(system, code_display)
+            if system_lookup is not None:
+                if system_lookup["found"]:
+                    snomed_result = lookup_snomed(str(code_display)) if system != "http://snomed.info/sct" else system_lookup
+                    icd10_result = lookup_icd10(str(code_display)) if system != "http://hl7.org/fhir/sid/icd-10" else system_lookup
+                else:
+                    warnings.append({
+                        "field": "code",
+                        "message": f"Invalid {system} code '{code_display}'.",
+                        "suggestion": "Verify the code and system or use a supported terminology code."
+                    })
+                    snomed_result = None
+                    icd10_result = None
+            else:
+                snomed_result = lookup_snomed(str(code_display))
+                icd10_result = lookup_icd10(str(code_display))
+        else:
+            snomed_result = lookup_snomed(str(code_display))
+            icd10_result = lookup_icd10(str(code_display))
+
+        if not snomed_result["found"] and not icd10_result["found"]:
             warnings.append({
                 "field": "code",
-                "message": f"Could not find SNOMED code for '{code_display}'.",
-                "suggestion": "Verify diagnosis name or provide SNOMED CT code manually."
+                "message": f"Could not find SNOMED or ICD-10 coding for '{code_display}'.",
+                "suggestion": "Verify diagnosis name or provide a standard SNOMED CT or ICD-10 code manually."
+            })
+        elif not snomed_result["found"] and icd10_result["found"]:
+            warnings.append({
+                "field": "code",
+                "message": f"Resolved ICD-10 code '{icd10_result['code']}' for '{code_display}'.",
+                "suggestion": "Use the returned ICD-10 coding directly if you want a diagnosis code in FHIR."
             })
 
     # 3. Clinical status check
@@ -274,11 +314,12 @@ def validate_condition(data: dict) -> dict:
         "valid": len(errors) == 0,
         "errors": errors,
         "warnings": warnings,
-        "snomed_result": snomed_result
+        "snomed_result": snomed_result,
+        "icd10_result": icd10_result
     }
 
 
-def build_condition_resource(data: dict, snomed_result: dict) -> dict:
+def build_condition_resource(data: dict, snomed_result: dict | None = None, icd10_result: dict | None = None) -> dict:
     """Build proper nested FHIR Condition resource"""
 
     resource = {"resourceType": "Condition"}
@@ -413,40 +454,61 @@ def build_condition_resource(data: dict, snomed_result: dict) -> dict:
                 }]
             }
 
-    # Code with SNOMED
+    # Code with SNOMED and/or ICD-10
     code = data.get("code")
-    if code:
-        # Handle both string and CodeableConcept dict formats
-        if isinstance(code, dict):
-            # If already a proper FHIR CodeableConcept with coding, use as-is
-            if "coding" in code:
-                resource["code"] = code
-            else:
-                # Simple dict without coding - convert to text
-                resource["code"] = {"text": str(code.get("text", code.get("display", "Unknown")))}
-        elif isinstance(code, str):
-            code_display = code
-            if snomed_result and snomed_result["found"]:
-                resource["code"] = {
-                    "coding": [{
-                        "system": "http://snomed.info/sct",
-                        "code": snomed_result["code"],
-                        "display": snomed_result["display"]
-                    }],
-                    "text": str(code_display)
-                }
-            else:
-                resource["code"] = {"text": str(code_display)}
-    else:
-        code_display = get_nested_value(data, "code.display") or "Unknown"
+    code_display = None
+    if isinstance(code, dict):
+        if "coding" in code:
+            resource["code"] = code
+        else:
+            code_display = code.get("display") or code.get("text") or code.get("code")
+    elif isinstance(code, str):
+        code_display = code
+
+    if code_display is not None:
+        codings = []
         if snomed_result and snomed_result["found"]:
+            codings.append({
+                "system": "http://snomed.info/sct",
+                "code": snomed_result["code"],
+                "display": snomed_result["display"]
+            })
+        if icd10_result and icd10_result["found"]:
+            codings.append({
+                "system": "http://hl7.org/fhir/sid/icd-10",
+                "code": icd10_result["code"],
+                "display": icd10_result["display"]
+            })
+        if codings:
+            preferred_display = icd10_result.get("display") if icd10_result and icd10_result.get("found") else snomed_result.get("display") if snomed_result and snomed_result.get("found") else str(code_display)
             resource["code"] = {
-                "coding": [{
-                    "system": "http://snomed.info/sct",
-                    "code": snomed_result["code"],
-                    "display": snomed_result["display"]
-                }],
-                "text": str(code_display)
+                "coding": codings,
+                "text": str(code_display),
+                "display": preferred_display,
+            }
+        else:
+            resource["code"] = {"text": str(code_display)}
+    elif not resource.get("code"):
+        code_display = get_nested_value(data, "code.display") or "Unknown"
+        codings = []
+        if snomed_result and snomed_result["found"]:
+            codings.append({
+                "system": "http://snomed.info/sct",
+                "code": snomed_result["code"],
+                "display": snomed_result["display"]
+            })
+        if icd10_result and icd10_result["found"]:
+            codings.append({
+                "system": "http://hl7.org/fhir/sid/icd-10",
+                "code": icd10_result["code"],
+                "display": icd10_result["display"]
+            })
+        if codings:
+            preferred_display = icd10_result.get("display") if icd10_result and icd10_result.get("found") else snomed_result.get("display") if snomed_result and snomed_result.get("found") else str(code_display)
+            resource["code"] = {
+                "coding": codings,
+                "text": str(code_display),
+                "display": preferred_display,
             }
         else:
             resource["code"] = {"text": str(code_display)}

@@ -16,6 +16,7 @@ from api_key_manager import (
     store_path,
 )
 from typing import Optional, List
+from datetime import datetime, timezone
 
 
 import json
@@ -54,6 +55,8 @@ from validators.medication_validator import (
 )
 
 from hl7_converter import convert_hl7_to_fhir
+from hl7_parser import HL7Parser
+from clinical_nlp import analyze_clinical_note
 import logging
 
 
@@ -120,7 +123,9 @@ EXEMPT_PATHS = {
     "/docs",
     "/openapi.json",
     "/redoc",
+    "/health",
     "/api/feedback",
+    "/api/clinical-note/analyze",
     "/get-api-key",
     "/register",
     "/usage",
@@ -129,6 +134,18 @@ EXEMPT_PATHS = {
     "/admin/delete-user",
     "/api/hl7-to-fhir",
     "/_debug_cors",
+    "/validate",
+    "/explain-errors",
+    "/autofix",
+    "/map-validate",
+    "/map",
+    "/map-and-validate",
+    "/observation/map-validate",
+    "/condition/map-validate",
+    "/encounter/map-validate",
+    "/medication/map-validate",
+    "/bundle",
+    "/unified-bundle",
     # OAuth endpoints removed; simplified email registration used instead
 }
 
@@ -518,6 +535,132 @@ class UnifiedBundleInput(BaseModel):
     bundle_type: str = "collection"
 
 
+def _build_hl7_message_from_fhir(resource: dict) -> dict:
+    """Create a simple HL7 v2 message from a FHIR resource for MVP interoperability."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    resource_type = resource.get("resourceType", "Unknown")
+
+    if resource_type == "Patient":
+        name = resource.get("name", [{}])[0] if resource.get("name") else {}
+        family = name.get("family", "")
+        given = " ".join(name.get("given", []))
+        full_name = " ".join([part for part in [given, family] if part]).strip() or "UNKNOWN"
+        gender = resource.get("gender", "")
+        birth_date = resource.get("birthDate", "")
+        message = (
+            f"MSH|^~\\&|MEDTECHTOOLS|SMARTFHIR|RECEIVER|FACILITY|{timestamp}||ADT^A01|MSG00001|P|2.5\r"
+            f"PID|1||{resource.get('id', 'UNKNOWN')}||{full_name}|||{gender}||{birth_date}"
+        )
+        return {"success": True, "hl7_message": message, "resource_type": resource_type}
+
+    if resource_type == "Observation":
+        code = resource.get("code", {}).get("coding", [{}])[0].get("code", "OBS") if resource.get("code") else {}
+        value = resource.get("valueString") or resource.get("valueQuantity", {}).get("value") or ""
+        unit = resource.get("valueQuantity", {}).get("unit", "")
+        subject_id = resource.get("subject", {}).get("reference", "UNKNOWN").split("/")[-1]
+        message = (
+            f"MSH|^~\\&|MEDTECHTOOLS|SMARTFHIR|RECEIVER|FACILITY|{timestamp}||ORU^R01|MSG00001|P|2.5\r"
+            f"OBX|1|TX|{code}||{value} {unit}".strip()
+        )
+        return {"success": True, "hl7_message": message, "resource_type": resource_type, "subject_id": subject_id}
+
+    if resource_type == "Condition":
+        code = resource.get("code", {}).get("coding", [{}])[0].get("code", "COND") if resource.get("code") else {}
+        message = (
+            f"MSH|^~\\&|MEDTECHTOOLS|SMARTFHIR|RECEIVER|FACILITY|{timestamp}||ADT^A01|MSG00001|P|2.5\r"
+            f"DG1|1||{code}||{resource.get('clinicalStatus', {}).get('coding', [{}])[0].get('code', 'active')}"
+        )
+        return {"success": True, "hl7_message": message, "resource_type": resource_type}
+
+    if resource_type == "Encounter":
+        subject_id = resource.get("subject", {}).get("reference", "UNKNOWN").split("/")[-1]
+        message = (
+            f"MSH|^~\\&|MEDTECHTOOLS|SMARTFHIR|RECEIVER|FACILITY|{timestamp}||ADT^A01|MSG00001|P|2.5\r"
+            f"PV1|1|O|{resource.get('class', {}).get('code', 'OUTPATIENT')}||||{subject_id}"
+        )
+        return {"success": True, "hl7_message": message, "resource_type": resource_type}
+
+    return {"success": False, "error": f"Unsupported FHIR resource type: {resource_type}"}
+
+
+def _parse_hl7_message(message: str) -> dict:
+    parser = HL7Parser()
+    parsed = parser.parse(message)
+    return {
+        "message_type": f"{parsed.message_type}^{parsed.trigger_event}" if parsed.message_type != "UNKNOWN" else "UNKNOWN",
+        "message_structure": parsed.message_structure,
+        "segments": {
+            segment_id: [
+                {
+                    "segment_id": segment.segment_id,
+                    "fields": segment.fields,
+                    "raw": segment.raw,
+                }
+                for segment in segments
+            ]
+            for segment_id, segments in parsed.segments.items()
+        },
+        "ordered_segments": [
+            {
+                "segment_id": segment.segment_id,
+                "fields": segment.fields,
+                "raw": segment.raw,
+            }
+            for segment in parsed.ordered_segments
+        ],
+        "errors": parsed.errors,
+    }
+
+
+def _validate_hl7_message(message: str) -> dict:
+    parsed = _parse_hl7_message(message)
+    errors = []
+    warnings = []
+
+    if not message or not message.strip():
+        errors.append({"field": "MESSAGE", "message": "HL7 message is empty"})
+        return {"valid": False, "errors": errors, "warnings": warnings, "summary": parsed}
+
+    if not any(segment.get("segment_id") == "MSH" for segment in parsed["ordered_segments"]):
+        errors.append({"field": "MSH", "message": "Message must contain an MSH segment"})
+
+    if not parsed["ordered_segments"]:
+        errors.append({"field": "MESSAGE", "message": "Message contains no segments"})
+
+    if not parsed["errors"] and not errors:
+        warnings.append({"field": "MESSAGE", "message": "Basic HL7 structure looks valid"})
+
+    return {
+        "valid": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "summary": parsed,
+    }
+
+
+def _explore_hl7_segments(message: str, segment_id: Optional[str] = None, field_index: Optional[int] = None, component_index: Optional[int] = None) -> dict:
+    parsed = _parse_hl7_message(message)
+    if segment_id:
+        selected = parsed["segments"].get(segment_id.upper(), [])
+    else:
+        selected = parsed["ordered_segments"]
+
+    if field_index is not None:
+        details = []
+        for segment in selected:
+            fields = segment.get("fields", [])
+            if field_index < 1 or field_index > len(fields):
+                continue
+            value = fields[field_index - 1]
+            if component_index is not None:
+                components = value.split("^") if value else []
+                value = components[component_index] if 0 <= component_index < len(components) else None
+            details.append({"segment_id": segment.get("segment_id"), "field_index": field_index, "value": value})
+        return {"segment_id": segment_id, "field_index": field_index, "component_index": component_index, "matches": details}
+
+    return {"segment_id": segment_id, "field_index": field_index, "component_index": component_index, "segments": selected}
+
+
 @app.get("/")
 def root():
     return {
@@ -529,7 +672,11 @@ def root():
             "POST /map-validate",
             "POST /bundle",
             "POST /unified-bundle",
-            "POST /api/hl7-to-fhir"
+            "POST /api/hl7-to-fhir",
+            "POST /api/fhir-to-hl7",
+            "POST /api/hl7/parse",
+            "POST /api/hl7/validate",
+            "POST /api/hl7/segment-explorer"
         ]
     }
 
@@ -844,7 +991,9 @@ def condition_map_validate(input: ConditionInput):
 
     # Step 4: Build FHIR structure
     fhir_resource = build_condition_resource(
-        raw, validation.get("snomed_result")
+        raw,
+        validation.get("snomed_result"),
+        validation.get("icd10_result")
     )
 
     # Step 5: Explain ai_needed errors
@@ -859,6 +1008,7 @@ def condition_map_validate(input: ConditionInput):
 
     return {
         "snomed_lookup": validation.get("snomed_result"),
+        "icd10_lookup": validation.get("icd10_result"),
         "fhir_resource": fhir_resource,
         "validation": {
             "valid": validation["valid"],
@@ -1210,11 +1360,59 @@ class HL7Input(BaseModel):
     explain_errors: bool = True
 
 
+class FHIRToHL7Input(BaseModel):
+    resource: dict
+
+
+class HL7ParseInput(BaseModel):
+    hl7_message: str
+
+
+class HL7ValidateInput(BaseModel):
+    hl7_message: str
+
+
+class HL7ExplorerInput(BaseModel):
+    hl7_message: str
+    segment_id: Optional[str] = None
+    field_index: Optional[int] = None
+    component_index: Optional[int] = None
+
+
 @app.post("/api/hl7-to-fhir")
 def convert_hl7_endpoint(input: HL7Input):
     """Convert HL7 v2 message to FHIR Bundle with error handling and explanations"""
     result = convert_hl7_to_fhir(input.hl7_message, input.explain_errors)
     return result
+
+
+@app.post("/api/fhir-to-hl7")
+def convert_fhir_to_hl7_endpoint(input: FHIRToHL7Input):
+    """Convert a simple FHIR resource into an HL7 v2 message for interoperability workflows."""
+    return _build_hl7_message_from_fhir(input.resource)
+
+
+@app.post("/api/hl7/parse")
+def parse_hl7_endpoint(input: HL7ParseInput):
+    """Parse an HL7 message into structured segments and fields."""
+    return _parse_hl7_message(input.hl7_message)
+
+
+@app.post("/api/hl7/validate")
+def validate_hl7_endpoint(input: HL7ValidateInput):
+    """Validate basic HL7 structure and return issues."""
+    return _validate_hl7_message(input.hl7_message)
+
+
+@app.post("/api/hl7/segment-explorer")
+def segment_explorer_endpoint(input: HL7ExplorerInput):
+    """Inspect HL7 segments, fields, and components in a structured way."""
+    return _explore_hl7_segments(
+        input.hl7_message,
+        segment_id=input.segment_id,
+        field_index=input.field_index,
+        component_index=input.component_index,
+    )
 
 
 # ── API Key endpoints ──────────────────────────────────────
@@ -1229,6 +1427,25 @@ class FeedbackInput(BaseModel):
     email: Optional[str] = None
     submitted_at: Optional[str] = None
     page: Optional[str] = None
+
+
+class ClinicalNoteInput(BaseModel):
+    text: str
+
+
+@app.post("/api/clinical-note/analyze")
+def analyze_clinical_note_endpoint(input: ClinicalNoteInput):
+    note_text = input.text.strip()
+    if not note_text:
+        raise HTTPException(
+            status_code=400,
+            detail="Clinical note text is required."
+        )
+
+    try:
+        return analyze_clinical_note(note_text)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.post("/api/feedback")

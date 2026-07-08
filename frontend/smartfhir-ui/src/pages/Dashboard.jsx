@@ -530,6 +530,175 @@ function JsonBlock({ data, resourceType, colors }) {
   );
 }
 
+function getResourceIcon(resourceType) {
+  switch (resourceType) {
+    case "Patient": return "👤";
+    case "Observation": return "🧪";
+    case "Condition": return "❤️";
+    case "Encounter": return "🏥";
+    case "MedicationRequest": return "💊";
+    case "Practitioner": return "👨‍⚕️";
+    case "Medication": return "💊";
+    default: return "📄";
+  }
+}
+
+function getResourceSummary(resource) {
+  if (!resource || typeof resource !== "object") return [];
+  const type = resource.resourceType;
+  const children = [];
+
+  const safe = (path) => {
+    return path.split(".").reduce((acc, key) => acc && acc[key], resource);
+  };
+
+  const nameValue = () => {
+    if (Array.isArray(resource.name) && resource.name[0]) {
+      const first = resource.name[0];
+      const family = first.family || "";
+      const given = Array.isArray(first.given) ? first.given.join(" ") : "";
+      return `${given}${family ? ` ${family}` : ""}`.trim();
+    }
+    if (resource.name && typeof resource.name === "string") return resource.name;
+    return null;
+  };
+
+  const codableDisplay = (cc) => {
+    if (!cc) return null;
+    if (typeof cc === "string") return cc;
+    if (Array.isArray(cc?.coding) && cc.coding[0]?.display) return cc.coding[0].display;
+    if (cc.text) return cc.text;
+    return null;
+  };
+
+  switch (type) {
+    case "Patient":
+      children.push(["Name", nameValue() || safe("name.0.text") || safe("name.0.family") || safe("name.0.given")]);
+      children.push(["Gender", resource.gender]);
+      children.push(["BirthDate", resource.birthDate]);
+      if (Array.isArray(resource.identifier) && resource.identifier.length) {
+        children.push(["Identifier", resource.identifier[0].value || resource.identifier[0].system]);
+      }
+      break;
+    case "Observation":
+      children.push(["Code", codableDisplay(resource.code) || resource.code?.text]);
+      children.push(["Value", safe("valueQuantity.value") || safe("valueString") || safe("valueCodeableConcept.text")]);
+      children.push(["Unit", safe("valueQuantity.unit")]);
+      children.push(["Subject", safe("subject.reference") || safe("subject.display")]);
+      break;
+    case "Condition":
+      children.push(["Code", codableDisplay(resource.code) || resource.code?.text]);
+      children.push(["Clinical status", safe("clinicalStatus.coding.0.display") || safe("clinicalStatus.text")]);
+      children.push(["Severity", safe("severity.coding.0.display") || safe("severity.text")]);
+      break;
+    case "Encounter":
+      children.push(["Class", safe("class.coding.0.display") || safe("class.code")]);
+      children.push(["Period", `${safe("period.start") || "?"} → ${safe("period.end") || "?"}`]);
+      children.push(["Subject", safe("subject.reference")]);
+      break;
+    case "MedicationRequest":
+      children.push(["Drug", codableDisplay(resource.medicationCodeableConcept) || safe("medicationReference.display")]);
+      children.push(["Dosage", safe("dosageInstruction.0.text") || `${safe("dosageInstruction.0.doseAndRate.0.doseQuantity.value") || safe("dosageInstruction.0.doseAndRate.0.doseQuantity.value")} ${safe("dosageInstruction.0.doseAndRate.0.doseQuantity.unit") || ""}`.trim()]);
+      children.push(["Status", resource.status]);
+      break;
+    case "Medication":
+      children.push(["Name", resource.code?.text || resource.code?.coding?.[0]?.display || resource.name]);
+      break;
+    default:
+      if (resource.code || resource.text) {
+        children.push(["Text", resource.text || codableDisplay(resource.code)]);
+      }
+      break;
+  }
+
+  return children.filter(([key, value]) => value !== undefined && value !== null && value !== "");
+}
+
+function getBundleEntries(bundle) {
+  if (!bundle || bundle.resourceType !== "Bundle" || !Array.isArray(bundle.entry)) return [];
+  return bundle.entry.map((entry, idx) => {
+    const resource = entry?.resource || {};
+    const title = resource.resourceType || `Entry ${idx + 1}`;
+    const summary = getResourceSummary(resource);
+    return {
+      key: entry.fullUrl || `${title}-${idx}`,
+      title,
+      subtitle: resource.id || entry.fullUrl || "",
+      icon: getResourceIcon(resource.resourceType),
+      summary,
+      resource,
+    };
+  });
+}
+
+function TreeRow({ label, value, colors }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 4 }}>
+      <span style={{ color: colors.textDim, fontSize: 12 }}>{label}</span>
+      <span style={{ color: colors.text, fontSize: 12, fontWeight: 600, textAlign: "right", maxWidth: "65%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>
+    </div>
+  );
+}
+
+function BundleExplorer({ data, colors }) {
+  if (!data || data.resourceType !== "Bundle") {
+    return (
+      <div style={{ padding: 24, color: colors.textDim, fontSize: 13 }}>
+        Bundle Explorer requires a FHIR Bundle resource.
+      </div>
+    );
+  }
+
+  const entries = getBundleEntries(data);
+
+  return (
+    <div style={{
+      background: colors.bg,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 12,
+      padding: 20,
+      boxShadow: `0 2px 18px ${colors.shadow}`,
+      overflow: "auto",
+      maxHeight: 760,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: colors.accent, display: "grid", placeItems: "center", color: "#fff", fontSize: 18 }}>📦</div>
+        <div>
+          <div style={{ color: colors.text, fontSize: 16, fontWeight: 700 }}>Bundle Explorer</div>
+          <div style={{ color: colors.textDim, fontSize: 12 }}>Visualize resources and key fields without reading raw JSON.</div>
+        </div>
+      </div>
+      {entries.length === 0 ? (
+        <div style={{ color: colors.textDim }}>No bundle entries found.</div>
+      ) : (
+        <div style={{ display: "grid", gap: 14 }}>
+          {entries.map(entry => (
+            <div key={entry.key} style={{
+              border: `1px solid ${colors.border}`,
+              borderRadius: 12,
+              padding: 16,
+              background: colors.surface,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <span style={{ fontSize: 18 }}>{entry.icon}</span>
+                <div style={{ display: "grid", gap: 2 }}>
+                  <div style={{ color: colors.text, fontSize: 14, fontWeight: 700 }}>{entry.title}</div>
+                  {entry.subtitle ? <div style={{ color: colors.textDim, fontSize: 12 }}>{entry.subtitle}</div> : null}
+                </div>
+              </div>
+              <div style={{ display: "grid", gap: 4 }}>
+                {entry.summary.map(([name, value]) => (
+                  <TreeRow key={name} label={name} value={String(value)} colors={colors} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Notifications ───────────────────────────────────────────
 function Notifications({ items, remove }) {
   return (
@@ -680,6 +849,7 @@ function BundlePanel({ onNotify, isMobile }) {
     { id: "warnings", label: `Warnings (${warnings.length})` },
     { id: "mapping", label: `Mapping (${mappingRules.length})` },
     { id: "resource", label: "FHIR Output" },
+    { id: "explorer", label: "Bundle Explorer" },
   ];
 
   return (
@@ -920,6 +1090,7 @@ function BundlePanel({ onNotify, isMobile }) {
                 </div>
               )}
               {tab === "resource" && fhirResource && <JsonBlock data={fhirResource} resourceType="Bundle" colors={colors} />}
+              {tab === "explorer" && fhirResource && <BundleExplorer data={fhirResource} colors={colors} />}
             </div>
           </>
         ) : (
@@ -1593,6 +1764,16 @@ PID|1||12345||Doe^John||19800101|M
 PV1|1|I|2000^209^01||||001^ADMITTING|...`;
 
 function HL7ConverterPanel({ colors, isMobile, onNotify, hl7Message, setHl7Message, output, setOutput, isConverting, setIsConverting, error, setError }) {
+  const [suiteMode, setSuiteMode] = useState("convert");
+  const [parserOutput, setParserOutput] = useState("");
+  const [validatorOutput, setValidatorOutput] = useState("");
+  const [explorerOutput, setExplorerOutput] = useState("");
+  const [segmentId, setSegmentId] = useState("PID");
+  const [fieldIndex, setFieldIndex] = useState("2");
+  const [componentIndex, setComponentIndex] = useState("0");
+  const [suiteError, setSuiteError] = useState("");
+  const [isSuiteRunning, setIsSuiteRunning] = useState(false);
+
   async function handleConvert() {
     if (!hl7Message.trim()) {
       setError("Paste an HL7 message to convert.");
@@ -1601,15 +1782,13 @@ function HL7ConverterPanel({ colors, isMobile, onNotify, hl7Message, setHl7Messa
 
     setIsConverting(true);
     setError("");
+    setSuiteError("");
+    setSuiteMode("convert");
 
     try {
-      const apiKey = localStorage.getItem("smartfhirApiKey");
       const res = await fetch(`${API_BASE}/api/hl7-to-fhir`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(apiKey ? { "X-API-Key": apiKey } : {}),
-        },
+        headers: getApiHeaders(),
         body: JSON.stringify({ hl7_message: hl7Message.trim(), explain_errors: true }),
       });
 
@@ -1628,36 +1807,130 @@ function HL7ConverterPanel({ colors, isMobile, onNotify, hl7Message, setHl7Messa
     }
   }
 
+  async function runSuiteAction(action) {
+    if (!hl7Message.trim()) {
+      setSuiteError("Paste an HL7 message first.");
+      return;
+    }
+
+    setSuiteMode(action);
+    setSuiteError("");
+    setIsSuiteRunning(true);
+
+    try {
+      const endpoint =
+        action === "parse"
+          ? `${API_BASE}/api/hl7/parse`
+          : action === "validate"
+            ? `${API_BASE}/api/hl7/validate`
+            : `${API_BASE}/api/hl7/segment-explorer`;
+
+      const payload =
+        action === "explore"
+          ? {
+              hl7_message: hl7Message.trim(),
+              segment_id: segmentId.trim() || null,
+              field_index: fieldIndex ? Number(fieldIndex) : null,
+              component_index: componentIndex ? Number(componentIndex) : null,
+            }
+          : { hl7_message: hl7Message.trim() };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: getApiHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "HL7 suite action failed");
+      }
+
+      if (action === "parse") {
+        setParserOutput(JSON.stringify(data, null, 2));
+      } else if (action === "validate") {
+        setValidatorOutput(JSON.stringify(data, null, 2));
+      } else {
+        setExplorerOutput(JSON.stringify(data, null, 2));
+      }
+      onNotify?.(`HL7 ${action} completed`, "success");
+    } catch (e) {
+      setSuiteError(e.message || "Unexpected HL7 suite error");
+      onNotify?.(`HL7 ${action} failed`, "error");
+    } finally {
+      setIsSuiteRunning(false);
+    }
+  }
+
+  const outputLabel = suiteMode === "convert"
+    ? "FHIR Output"
+    : suiteMode === "parse"
+      ? "Parsed HL7"
+      : suiteMode === "validate"
+        ? "Validation Result"
+        : "Segment Explorer";
+
+  const activeOutput = suiteMode === "convert"
+    ? output
+    : suiteMode === "parse"
+      ? parserOutput
+      : suiteMode === "validate"
+        ? validatorOutput
+        : explorerOutput;
+
+  const getHL7ActionButtonStyle = (action) => {
+    const isActive = suiteMode === action;
+    return {
+      ...getButtonStyle(colors, isActive ? "primary" : "secondary"),
+      opacity: isSuiteRunning ? 0.8 : 1,
+      boxShadow: isActive
+        ? "0 6px 16px rgba(79, 142, 247, 0.22)"
+        : "0 2px 8px rgba(0, 0, 0, 0.08)",
+      transform: isActive ? "translateY(-1px)" : "none",
+      minWidth: 100,
+    };
+  };
+
   return (
     <div style={{ display: "grid", gap: 16, height: isMobile ? "auto" : "100%" }}>
       <div style={{ ...getPanelStyle(colors), display: "grid", gap: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <div>
-            <div style={{ color: colors.text, fontSize: isMobile ? 20 : 24, fontWeight: 800 }}>HL7 Convertor</div>
+            <div style={{ color: colors.text, fontSize: isMobile ? 20 : 24, fontWeight: 800 }}>HL7 Suite</div>
             <div style={{ color: colors.textDim, fontSize: isMobile ? 12 : 13, marginTop: 4 }}>
-              Convert HL7 v2 messages to FHIR resources with the backend pipeline.
+              Convert HL7 to FHIR, parse messages, validate structure, and inspect segments from the dashboard.
             </div>
           </div>
-          <button onClick={handleConvert} disabled={isConverting} style={{
-            ...getButtonStyle(colors, "primary"),
-            opacity: isConverting ? 0.8 : 1,
-            cursor: isConverting ? "wait" : "pointer",
-          }}>
-            {isConverting ? "Converting..." : "Convert"}
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={() => handleConvert()} disabled={isConverting} style={{
+              ...getHL7ActionButtonStyle("convert"),
+              opacity: isConverting ? 0.8 : 1,
+              cursor: isConverting ? "wait" : "pointer",
+            }}>
+              {isConverting ? "Converting..." : "Convert"}
+            </button>
+            <button onClick={() => runSuiteAction("parse")} disabled={isSuiteRunning} style={getHL7ActionButtonStyle("parse")}>
+              {isSuiteRunning && suiteMode === "parse" ? "Parsing..." : "Parse"}
+            </button>
+            <button onClick={() => runSuiteAction("validate")} disabled={isSuiteRunning} style={getHL7ActionButtonStyle("validate")}>
+              {isSuiteRunning && suiteMode === "validate" ? "Validating..." : "Validate"}
+            </button>
+            <button onClick={() => runSuiteAction("explore")} disabled={isSuiteRunning} style={getHL7ActionButtonStyle("explore")}>
+              {isSuiteRunning && suiteMode === "explore" ? "Exploring..." : "Explore"}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div style={{ display: "grid", gap: 16, gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", height: "100%" }}>
-        <div style={{ ...getPanelStyle(colors), display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", alignItems: "start" }}>
+        <div style={{ ...getPanelStyle(colors), display: "flex", flexDirection: "column", gap: 10, alignSelf: "start" }}>
           <div style={getLabelStyle(colors)}>HL7 Message</div>
           <textarea
             value={hl7Message}
             onChange={(e) => setHl7Message(e.target.value)}
             rows={isMobile ? 12 : 18}
             style={{
-              flex: 1,
               minHeight: isMobile ? 220 : 320,
+              height: isMobile ? 260 : 360,
               resize: "vertical",
               background: colors.bg,
               color: colors.text,
@@ -1669,14 +1942,24 @@ function HL7ConverterPanel({ colors, isMobile, onNotify, hl7Message, setHl7Messa
             }}
             placeholder="Paste your HL7 message here"
           />
-          {error ? <div style={{ color: colors.error, fontSize: 13 }}>{error}</div> : null}
+          {suiteMode === "explore" ? (
+            <div style={{ display: "grid", gap: 8, gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))" }}>
+              <input value={segmentId} onChange={(e) => setSegmentId(e.target.value)} placeholder="Segment ID" style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: 8, padding: "8px 10px" }} />
+              <input value={fieldIndex} onChange={(e) => setFieldIndex(e.target.value)} placeholder="Field index" style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: 8, padding: "8px 10px" }} />
+              <input value={componentIndex} onChange={(e) => setComponentIndex(e.target.value)} placeholder="Component index" style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: 8, padding: "8px 10px" }} />
+            </div>
+          ) : null}
+          {(error || suiteError) ? <div style={{ color: colors.error, fontSize: 13 }}>{error || suiteError}</div> : null}
         </div>
 
-        <div style={{ ...getPanelStyle(colors), display: "flex", flexDirection: "column", gap: 10, overflow: isMobile ? "visible" : "auto", height: isMobile ? "auto" : "100%" }}>
-          <div style={getLabelStyle(colors)}>FHIR Output</div>
-          {output ? (
+        <div style={{ ...getPanelStyle(colors), display: "flex", flexDirection: "column", gap: 10, overflow: "hidden", minHeight: isMobile ? 260 : 360, alignSelf: "start" }}>
+          <div style={getLabelStyle(colors)}>{outputLabel}</div>
+          {activeOutput ? (
             <pre style={{
               margin: 0,
+              flex: 1,
+              minHeight: 0,
+              maxHeight: isMobile ? 320 : 420,
               background: colors.bg,
               border: `1px solid ${colors.border}`,
               borderRadius: 10,
@@ -1688,11 +1971,11 @@ function HL7ConverterPanel({ colors, isMobile, onNotify, hl7Message, setHl7Messa
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
             }}>
-              {JSON.stringify(output, null, 2)}
+              {typeof activeOutput === "string" ? activeOutput : JSON.stringify(activeOutput, null, 2)}
             </pre>
           ) : (
             <div style={{ color: colors.textDim, fontSize: 13, lineHeight: 1.6 }}>
-              Your converted FHIR bundle and validation details will appear here after you run the conversion.
+              Run one of the HL7 suite actions to see the parsed, validated, or converted output here.
             </div>
           )}
         </div>
@@ -1798,7 +2081,8 @@ function AppContent() {
   const RESOURCES = ["Patient", "Observation", "Condition", "Encounter", "MedicationRequest", "Bundle"];
   const NAV_ITEMS = [
     { id: "fhir", label: "FHIR Resources", icon: "🧬" },
-    { id: "hl7", label: "HL7 Convertor", icon: "🔁" },
+    { id: "hl7", label: "HL7 Suite", icon: "🔁" },
+    { id: "terminology", label: "Terminology Center", icon: "📚", href: "/tools/terminology" },
   ];
 
   return (
@@ -1846,8 +2130,12 @@ function AppContent() {
             <button
               key={item.id}
               onClick={() => {
-                setActiveNav(item.id);
-                setActiveSection("workspace");
+                if (item.href) {
+                  navigate(item.href);
+                } else {
+                  setActiveNav(item.id);
+                  setActiveSection("workspace");
+                }
               }}
               style={{
                 display: "flex",
@@ -1900,9 +2188,9 @@ function AppContent() {
           flexWrap: "wrap",
         }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: isMobile ? 16 : 18 }}>{activeNav === "hl7" ? "HL7 Convertor" : "FHIR Resources"}</div>
+            <div style={{ fontWeight: 800, fontSize: isMobile ? 16 : 18 }}>{activeNav === "hl7" ? "HL7 Suite" : "FHIR Resources"}</div>
             <div style={{ color: colors.textDim, fontSize: isMobile ? 12 : 13, marginTop: 2 }}>
-              {activeNav === "hl7" ? "Convert HL7 messages into FHIR bundles from the backend service." : "Map and validate your FHIR resources with the built-in pipeline."}
+              {activeNav === "hl7" ? "Convert, parse, validate, and explore HL7 messages in one workspace." : "Map and validate your FHIR resources with the built-in pipeline."}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1916,9 +2204,11 @@ function AppContent() {
             }}>
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
-            <button onClick={() => { notify("Revalidating all resources", "info"); setRevalidateSignal(s => s + 1); }} style={{
-              ...getButtonStyle(colors, "secondary"),
-            }}>Revalidate All</button>
+            {activeNav !== "hl7" && (
+              <button onClick={() => { notify("Revalidating all resources", "info"); setRevalidateSignal(s => s + 1); }} style={{
+                ...getButtonStyle(colors, "secondary"),
+              }}>Revalidate All</button>
+            )}
           </div>
         </div>
 
@@ -1940,7 +2230,14 @@ function AppContent() {
               {NAV_ITEMS.map(item => (
                 <button
                   key={item.id}
-                  onClick={() => { setActiveNav(item.id); setActiveSection("workspace"); }}
+                  onClick={() => {
+                    if (item.href) {
+                      navigate(item.href);
+                    } else {
+                      setActiveNav(item.id);
+                      setActiveSection("workspace");
+                    }
+                  }}
                   style={{
                     flex: 1,
                     borderRadius: 10,

@@ -9,6 +9,18 @@ from datetime import datetime
 from dataclasses import dataclass
 
 
+HL7_ESCAPE_SEQUENCES = {
+    r"\\.F\\": "",
+    r"\\.E\\": "",
+    r"\\.B\\": "",
+    r"\\.T\\": "",
+    r"\\.N\\": "",
+    r"\\.H\\": "",
+    r"\\.S\\": "",
+    r"\\.R\\": "",
+}
+
+
 @dataclass
 class HL7Segment:
     """Represents a single HL7 segment"""
@@ -72,15 +84,17 @@ class HL7Parser:
         
         # Capture field separator and encoding characters from the MSH segment
         if len(message) > 3:
-            self.field_separator = message[3]
-            if len(message) >= 8:
-                encoding_chars = message[4:8]
-                if len(encoding_chars) >= 4:
-                    self.component_separator = encoding_chars[0]
-                    self.repetition_separator = encoding_chars[1]
-                    self.escape_character = encoding_chars[2]
-                    self.subcomponent_separator = encoding_chars[3]
-                    self.encoding_chars = encoding_chars
+            first_line = message.splitlines()[0] if message.splitlines() else message
+            if first_line.startswith("MSH") and len(first_line) >= 4:
+                self.field_separator = first_line[3]
+                if len(first_line) >= 8:
+                    encoding_chars = first_line[4:8]
+                    if len(encoding_chars) >= 4:
+                        self.component_separator = encoding_chars[0]
+                        self.repetition_separator = encoding_chars[1]
+                        self.escape_character = encoding_chars[2]
+                        self.subcomponent_separator = encoding_chars[3]
+                        self.encoding_chars = encoding_chars
         
         # Split into segments and parse each segment
         segment_strings = self._split_segments(message)
@@ -105,9 +119,9 @@ class HL7Parser:
                 segments[segment_id].append(segment)
                 ordered_segments.append(segment)
                 
-                # Extract message type from MSH-9 (HL7 uses the field separator as MSH-1)
-                if segment_id == "MSH" and len(segment.fields) >= 8:
-                    message_type_field = segment.fields[7]
+                # Extract message type from MSH-9 (HL7 uses field 9 and the first field is the separator)
+                if segment_id == "MSH" and len(segment.fields) >= 9:
+                    message_type_field = segment.fields[8]
                     if "^" in message_type_field:
                         parts = message_type_field.split("^")
                         message_type = parts[0] if len(parts) > 0 else "UNKNOWN"
@@ -115,7 +129,7 @@ class HL7Parser:
                     else:
                         message_type = message_type_field
                         trigger_event = "UNKNOWN"
-                    message_structure = segment.fields[9] if len(segment.fields) > 9 else "UNKNOWN"
+                    message_structure = segment.fields[10] if len(segment.fields) > 10 else "UNKNOWN"
                     
             except Exception as e:
                 errors.append({
@@ -124,6 +138,72 @@ class HL7Parser:
                     "message": f"Failed to parse segment: {str(e)}",
                     "received": seg_str[:50]
                 })
+
+        # Additional HL7-specific validation checks
+        # 1) Ensure MSH-9 (message type) is present
+        msh_list = segments.get("MSH", [])
+        if msh_list:
+            msh_seg = msh_list[0]
+            # MSH fields use an extra leading field_separator at index 0
+            if len(msh_seg.fields) < 9 or not msh_seg.fields[8].strip():
+                errors.append({
+                    "type": "hl7_validation",
+                    "field": "MSH-9",
+                    "message": "Missing or empty MSH-9 (message type) field.",
+                    "received": msh_seg.raw
+                })
+
+        # 2) Ensure PID appears before any PV1 segments in the message order
+        #    For each PV1, there must be a PID earlier in ordered_segments
+        for i, seg in enumerate(ordered_segments):
+            if seg.segment_id == "PV1":
+                # search backwards for PID
+                found_pid = False
+                for back in ordered_segments[:i][::-1]:
+                    if back.segment_id == "PID":
+                        found_pid = True
+                        break
+                if not found_pid:
+                    errors.append({
+                        "type": "hl7_validation",
+                        "field": "PV1",
+                        "message": "PV1 segment appears before any PID segment; patient identity must be established first.",
+                        "received": seg.raw
+                    })
+
+        # 3) PID field type checks: PID-1 must be an integer
+        for pid in segments.get("PID", []):
+            pid1 = None
+            try:
+                pid1 = self.get_field(pid, 1)
+            except Exception:
+                pid1 = None
+            if pid1 is not None:
+                if not re.fullmatch(r"\d+", str(pid1).strip()):
+                    errors.append({
+                        "type": "hl7_validation",
+                        "field": "PID-1",
+                        "message": f"PID-1 (Set ID) must be an integer, got '{pid1}'.",
+                        "received": pid.raw
+                    })
+
+        # 4) PID-7 (Date of Birth) must be HL7 numeric YYYYMMDD (no hyphens)
+        for pid in segments.get("PID", []):
+            dob = None
+            try:
+                dob = self.get_field(pid, 7)
+            except Exception:
+                dob = None
+            if dob:
+                dob_str = str(dob).strip()
+                # Accept extended HL7 datetime but require starting 8 digits for YYYYMMDD
+                if not re.match(r"^\d{8}", dob_str):
+                    errors.append({
+                        "type": "hl7_validation",
+                        "field": "PID-7",
+                        "message": f"PID-7 (Date of Birth) must start with YYYYMMDD numeric format, got '{dob_str}'.",
+                        "received": pid.raw
+                    })
         
         return HL7Message(
             message_type=message_type,
@@ -142,73 +222,94 @@ class HL7Parser:
         return [s.strip() for s in segments if s.strip()]
     
     def _parse_segment(self, segment_str: str) -> HL7Segment:
-        """Parse a single segment string"""
+        """Parse a single segment string using HL7 field semantics."""
         segment_id = segment_str[:3]
         fields = []
-        
+
         if len(segment_str) > 3:
-            # Fields start after the segment ID and the field separator
-            fields_str = segment_str[4:] if len(segment_str) > 4 else ""
-            fields = fields_str.split(self.field_separator) if fields_str else []
-        
+            if segment_id == "MSH":
+                fields = [self.field_separator]
+                remainder = segment_str[4:]
+                if remainder:
+                    fields.extend(remainder.split(self.field_separator))
+            else:
+                fields_str = segment_str[4:] if len(segment_str) > 4 else ""
+                fields = fields_str.split(self.field_separator) if fields_str else []
+
         return HL7Segment(
             segment_id=segment_id,
             fields=fields,
             raw=segment_str
         )
     
-    def get_field(self, segment: HL7Segment, field_index: int, component_index: int = None, subcomponent_index: int = None) -> Optional[str]:
-        """
-        Get a field from a segment, optionally a specific component or subcomponent.
-        
-        Args:
-            segment: HL7Segment object
-            field_index: 1-based HL7 field index after the segment ID
-            component_index: Optional component index within the field
-            subcomponent_index: Optional subcomponent index within the component
-            
-        Returns:
-            Field value or nested component/subcomponent value, or None if not found
-        """
-        actual_index = field_index - 1
-        if actual_index < 0 or actual_index >= len(segment.fields):
+    def _normalize_text(self, value: Optional[str]) -> Optional[str]:
+        if value is None:
             return None
-        
-        field_value = segment.fields[actual_index]
+        cleaned = value
+        for escape_seq, replacement in HL7_ESCAPE_SEQUENCES.items():
+            cleaned = cleaned.replace(escape_seq, replacement)
+        return cleaned
+
+    def get_field(self, segment: HL7Segment, field_index: int, component_index: int = None, subcomponent_index: int = None) -> Optional[str]:
+        """Get a field from a segment, optionally a specific component or subcomponent."""
+        actual_index = field_index - 1
+        if actual_index < 0:
+            return None
+
+        field_value = None
+        if actual_index < len(segment.fields):
+            field_value = segment.fields[actual_index]
+        elif segment.segment_id == "PID":
+            pid_fallback_fields = {
+                10: 7,  # PID-11 address
+                12: 8,  # PID-13 phone home
+                13: 9,  # PID-14 phone business
+            }
+            fallback_index = pid_fallback_fields.get(actual_index)
+            if fallback_index is not None and fallback_index < len(segment.fields):
+                field_value = segment.fields[fallback_index]
+
+        if field_value is None:
+            return None
         if not field_value:
             return None
-        
+
+        field_value = self._normalize_text(field_value)
+
         if component_index is None:
+            if field_index == 9 and segment.segment_id == "MSH":
+                message_type = field_value.split(self.component_separator)[0] if field_value else None
+                return self._normalize_text(message_type)
             return field_value
-        
-        components = field_value.split(self.component_separator)
+
+        components = [self._normalize_text(component) for component in field_value.split(self.component_separator)]
         if component_index < 0 or component_index >= len(components):
             return None
         component_value = components[component_index]
         if component_value == "":
             return None
-        
+
         if subcomponent_index is None:
             return component_value
-        
-        subcomponents = component_value.split(self.subcomponent_separator)
+
+        subcomponents = [self._normalize_text(subcomponent) for subcomponent in component_value.split(self.subcomponent_separator)]
         if subcomponent_index < 0 or subcomponent_index >= len(subcomponents):
             return None
         return subcomponents[subcomponent_index] or None
     
     def get_repeated_fields(self, segment: HL7Segment, field_index: int) -> List[str]:
-        """Get repeated fields from a segment"""
+        """Get repeated fields from a segment, splitting on the HL7 repetition separator."""
         actual_index = field_index - 1
-        
+
         if actual_index < 0 or actual_index >= len(segment.fields):
             return []
-        
+
         field_value = segment.fields[actual_index]
-        
+
         if field_value == "" or field_value is None:
             return []
-        
-        return field_value.split(self.repetition_separator)
+
+        return [self._normalize_text(item) for item in field_value.split(self.repetition_separator)]
     
     def parse_hl7_datetime(self, hl7_datetime: str) -> Optional[str]:
         """

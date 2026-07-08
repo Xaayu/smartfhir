@@ -60,10 +60,13 @@ def init_api_database():
         return
 
     schema_path = os.path.join(BASE_DIR, "supabase_schema.sql")
-    with db_connect() as conn:
-        with conn.cursor() as cur:
-            with open(schema_path, "r", encoding="utf-8") as f:
-                cur.execute(f.read())
+    try:
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                with open(schema_path, "r", encoding="utf-8") as f:
+                    cur.execute(f.read())
+    except Exception as exc:
+        print(f"PostgreSQL initialization failed; continuing with local file storage: {exc}")
 
 
 def utc_now() -> datetime:
