@@ -5,16 +5,16 @@ import ApiKeyPage from "./pages/ApiKeyPage";
 import DocsPage from "./pages/DocsPage";
 import ArticlePage from "./pages/ArticlePage";
 import ToolsPage from "./pages/ToolsPage";
-import Dashboard from "./pages/Dashboard";
 import AdminPage from "./pages/AdminPage";
 import AdminGate from "./pages/AdminGate";
 import ProtectedRoute from "./components/ProtectedRoute";
-import HL7SuitePage from "./pages/HL7SuitePage";
 import TerminologyCenterPage from "./pages/TerminologyCenterPage";
+import FhirResourcesPage from "./pages/Fhirresourcespage";
+import HL7SuitePage from "./pages/hl7suitpage";
 
 function HomeRoute() {
   const hasApiKey = Boolean(localStorage.getItem("smartfhirApiKey"));
-  return hasApiKey ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+  return hasApiKey ? <Navigate to="/tools" replace /> : <LandingPage />;
 }
 
 function AppRoutes() {
@@ -32,18 +32,35 @@ function AppRoutes() {
 
       {/* Tools hub */}
       <Route path="/tools" element={<ToolsPage />} />
-      <Route path="/tools/hl7-suite" element={<HL7SuitePage />} />
-      <Route path="/tools/terminology" element={<TerminologyCenterPage />} />
 
-      {/* Dashboard - Protected */}
+      {/* Tool-specific dashboards - each protected by API key */}
       <Route
-        path="/dashboard"
+        path="/tools/fhir"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <FhirResourcesPage />
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/tools/hl7-suite"
+        element={
+          <ProtectedRoute>
+            <HL7SuitePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tools/terminology"
+        element={
+          <ProtectedRoute>
+            <TerminologyCenterPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Legacy alias - old bookmarks/links to /dashboard still work */}
+      <Route path="/dashboard" element={<Navigate to="/tools/fhir" replace />} />
 
       {/* Founder analytics - Protected */}
       <Route

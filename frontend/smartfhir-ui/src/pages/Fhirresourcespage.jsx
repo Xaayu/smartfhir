@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../config";
 
@@ -132,31 +132,6 @@ function getApiHeaders() {
   };
 }
 
-// Helper to create panel style with theme colors
-function getPanelStyle(colors) {
-  return {
-    background: colors.surface,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 12,
-    padding: 24,
-    boxShadow: `0 4px 20px ${colors.shadow}`,
-    transition: "all 0.3s ease",
-  };
-}
-
-// Helper to create label style with theme colors
-function getLabelStyle(colors) {
-  return {
-    color: colors.muted,
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    marginBottom: 12,
-    fontWeight: 600,
-  };
-}
-
-// --- JSON helpers ---
 function extractPositionFromError(msg) {
   // try to extract 'position N' or 'at line X column Y'
   const posMatch = msg.match(/position\s*(\d+)/i);
@@ -191,8 +166,6 @@ function autoFixJSON(str) {
   return null;
 }
 
-// ── tiny helpers ──────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
 function Badge({ children, color, colors }) {
   return (
     <span style={{
@@ -204,27 +177,7 @@ function Badge({ children, color, colors }) {
   );
 }
 
-const getButtonStyle = (colors, variant = "primary") => {
-  const base = {
-    borderRadius: 8,
-    fontWeight: 700,
-    cursor: "pointer",
-    padding: "10px 14px",
-    transition: "all 0.3s ease",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-  };
 
-  if (variant === "primary") {
-    return { ...base, background: colors.accent, color: "#fff", border: "none" };
-  }
-  if (variant === "secondary") {
-    return { ...base, background: colors.surface, color: colors.text, border: `1px solid ${colors.border}` };
-  }
-  if (variant === "faint") {
-    return { ...base, background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` };
-  }
-  return base;
-};
 
 function GradeRing({ grade, colors }) {
   const color = GRADE_COLORS[grade] || colors.muted;
@@ -699,7 +652,6 @@ function BundleExplorer({ data, colors }) {
   );
 }
 
-// ── Notifications ───────────────────────────────────────────
 function Notifications({ items, remove }) {
   return (
     <div style={{ position: 'fixed', right: 20, top: 80, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -734,6 +686,17 @@ function MappingRow({ rule, colors }) {
     </div>
   );
 }
+
+const TEXTAREA_STYLE = {
+  flex: 1,
+  borderRadius: 8,
+  padding: 12,
+  fontFamily: "monospace",
+  fontSize: 12,
+  lineHeight: 1.6,
+  resize: "vertical",
+  outline: "none",
+};
 
 function BundlePanel({ onNotify, isMobile }) {
   const { colors } = useTheme();
@@ -1101,18 +1064,6 @@ function BundlePanel({ onNotify, isMobile }) {
   );
 }
 
-const TEXTAREA_STYLE = {
-  flex: 1,
-  borderRadius: 8,
-  padding: 12,
-  fontFamily: "monospace",
-  fontSize: 12,
-  lineHeight: 1.6,
-  resize: "vertical",
-  outline: "none",
-};
-
-// ── Resource Panel ────────────────────────────────────────────
 function ResourcePanel({ type, onRun, revalidateSignal, onNotify, isMobile }) {
   const { colors } = useTheme();
   const [input, setInput] = useState(JSON.stringify(SAMPLE_DATA[type], null, 2));
@@ -1487,288 +1438,18 @@ function ResourcePanel({ type, onRun, revalidateSignal, onNotify, isMobile }) {
   );
 }
 
-// ── App ───────────────────────────────────────────────────────
-function loadApiProfile() {
-  const existingKey = localStorage.getItem("smartfhirApiKey");
-
-  return {
-    apiKey: existingKey || "",
-    email: localStorage.getItem("smartfhirEmail") || "developer@example.com",
-    plan: localStorage.getItem("smartfhirPlan") || "Free",
-    usage: Number(localStorage.getItem("smartfhirUsage") || 0),
-    limit: Number(localStorage.getItem("smartfhirLimit") || 500),
-    remaining: Number(localStorage.getItem("smartfhirRemaining") || 500),
-    lastUsed: localStorage.getItem("smartfhirLastUsed") || null,
-  };
-}
-
-function ApiCenter({ profile, setProfile, onNotify, onClose, isMobile }) {
-  const { colors } = useTheme();
-  const [refreshingUsage, setRefreshingUsage] = useState(false);
-  const usagePct = Math.min(100, Math.round((profile.usage / profile.limit) * 100));
-  const capabilities = [
-    ["Refine map fields", "Match and normalize messy source keys into FHIR-ready fields."],
-    ["Lookup codes", "Resolve LOINC, SNOMED, and RxNorm values automatically."],
-    ["Validate resources", "Ensure required fields, enums, and structure are correct."],
-    ["Auto-fix common issues", "Apply safe repairs for dates, genders, statuses, and formats."],
-  ];
-
-  async function copyKey() {
-    try {
-      await navigator.clipboard.writeText(profile.apiKey);
-      onNotify && onNotify("API key copied", "success");
-    } catch (e) {
-      onNotify && onNotify("Could not copy API key", "error");
-    }
-  }
-
-  async function regenerateKey() {
-    try {
-      const res = await fetch(`${API_BASE}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: profile.email }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        onNotify && onNotify(data.detail || "Could not refresh API key", "error");
-        return;
-      }
-
-      const remaining = data.calls_remaining ?? (data.calls_limit || 500) - (data.calls_used || 0);
-      localStorage.setItem("smartfhirApiKey", data.api_key);
-      localStorage.setItem("smartfhirUsage", String(data.calls_used || 0));
-      localStorage.setItem("smartfhirLimit", String(data.calls_limit || 500));
-      localStorage.setItem("smartfhirRemaining", String(remaining));
-      localStorage.setItem("smartfhirLastUsed", data.last_used || "");
-
-      setProfile(prev => ({
-        ...prev,
-        apiKey: data.api_key,
-        usage: data.calls_used || 0,
-        limit: data.calls_limit || 500,
-        remaining,
-        lastUsed: data.last_used || prev.lastUsed,
-      }));
-      onNotify && onNotify("API key regenerated", "success");
-    } catch (e) {
-      onNotify && onNotify("Cannot connect to API key service", "error");
-    }
-  }
-
-  async function refreshUsage() {
-    if (!profile.apiKey) {
-      onNotify && onNotify("No API key available.", "warning");
-      return;
-    }
-    setRefreshingUsage(true);
-    try {
-      const res = await fetch(`${API_BASE}/usage`, {
-        headers: { "X-API-Key": profile.apiKey },
-      });
-      const data = await res.json();
-
-      if (!res.ok || data.error) {
-        onNotify && onNotify(data.error || data.detail || "Unable to refresh usage", "error");
-        return;
-      }
-
-      const remaining = data.calls_remaining ?? (data.calls_limit || 500) - (data.calls_used || 0);
-      localStorage.setItem("smartfhirEmail", data.email);
-      localStorage.setItem("smartfhirPlan", data.plan || "Free");
-      localStorage.setItem("smartfhirUsage", String(data.calls_used || 0));
-      localStorage.setItem("smartfhirLimit", String(data.calls_limit || 500));
-      localStorage.setItem("smartfhirRemaining", String(remaining));
-      localStorage.setItem("smartfhirLastUsed", data.last_used || "");
-
-      setProfile(prev => ({
-        ...prev,
-        email: data.email,
-        plan: data.plan || "Free",
-        usage: data.calls_used || 0,
-        limit: data.calls_limit || 500,
-        remaining,
-        lastUsed: data.last_used || prev.lastUsed,
-      }));
-      onNotify && onNotify("Usage refreshed", "success");
-    } catch (e) {
-      onNotify && onNotify("Cannot connect to usage service", "error");
-    } finally {
-      setRefreshingUsage(false);
-    }
-  }
-
-  const panelStyle = getPanelStyle(colors);
-  const labelStyle = getLabelStyle(colors);
-
-  return (
-    <div style={{
-      maxWidth: 1040,
-      margin: "0 auto",
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.2fr) minmax(280px, 0.8fr)",
-      gap: isMobile ? 12 : 16,
-    }}>
-      <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ color: colors.text, fontSize: isMobile ? 20 : 24, fontWeight: 800 }}>API Center</div>
-          <div style={{ color: colors.textDim, fontSize: isMobile ? 12 : 13, marginTop: 4 }}>
-            Manage your key, usage, plan, and developer access.
-          </div>
-        </div>
-        <button onClick={onClose} aria-label="Close API Center" style={{
-          ...getButtonStyle(colors, "faint"),
-          padding: "9px 14px",
-        }}>
-          Close
-        </button>
-      </div>
-
-      <div style={{ ...panelStyle, gridColumn: "1 / -1" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: isMobile ? "auto" : 280 }}>
-            <div style={labelStyle}>API Key</div>
-            <div style={{
-              fontFamily: "monospace",
-              color: colors.accent,
-              background: colors.bg,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 8,
-              padding: isMobile ? "10px 12px" : "12px 14px",
-              minWidth: isMobile ? "auto" : 280,
-              maxWidth: isMobile ? "100%" : 560,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              fontSize: isMobile ? 11 : 12,
-            }}>
-              {profile.apiKey}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={copyKey} style={{
-              ...getButtonStyle(colors, "secondary"),
-            }}>Copy</button>
-            <button onClick={regenerateKey} style={{
-              ...getButtonStyle(colors, "primary"),
-            }}>Regenerate</button>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: isMobile ? 12 : 16 }}>
-        <div style={panelStyle}>
-          <div style={labelStyle}>Calls remaining</div>
-          <div style={{ color: colors.text, fontSize: isMobile ? 24 : 28, fontWeight: 800 }}>{profile.remaining}</div>
-          <div style={{ color: colors.textDim, fontSize: isMobile ? 11 : 12, marginTop: 8 }}>Remaining monthly calls</div>
-        </div>
-        <div style={panelStyle}>
-          <div style={labelStyle}>Last API use</div>
-          <div style={{ color: colors.text, fontSize: isMobile ? 14 : 16, fontWeight: 700, marginBottom: 6 }}>
-            {profile.lastUsed ? new Date(profile.lastUsed).toLocaleString() : "No recent usage"}
-          </div>
-          <div style={{ color: colors.textDim, fontSize: isMobile ? 11 : 12 }}>Updated when you refresh usage</div>
-        </div>
-      </div>
-
-      <div style={panelStyle}>
-        <div style={labelStyle}>Usage</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-          <div style={{ color: colors.text, fontSize: isMobile ? 24 : 28, fontWeight: 800 }}>
-            {profile.usage} / {profile.limit}
-          </div>
-          <div style={{ color: colors.textDim, fontSize: isMobile ? 12 : 13 }}>API Calls Used</div>
-        </div>
-        <div style={{
-          height: 10,
-          background: colors.bg,
-          border: `1px solid ${colors.border}`,
-          borderRadius: 999,
-          overflow: "hidden",
-        }}>
-          <div style={{
-            width: `${usagePct}%`,
-            height: "100%",
-            background: `linear-gradient(90deg, ${colors.accent}, ${colors.success})`,
-          }} />
-        </div>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: 12,
-          gap: 8,
-          flexWrap: "wrap"
-        }}>
-          <div style={{ color: colors.textDim, fontSize: isMobile ? 11 : 12 }}>
-            {Math.max(0, profile.remaining)} calls remaining
-          </div>
-          <button onClick={refreshUsage} disabled={refreshingUsage} style={{
-            ...getButtonStyle(colors, "secondary"),
-            background: refreshingUsage ? colors.border : colors.surface,
-            cursor: refreshingUsage ? "default" : "pointer",
-          }}>
-            {refreshingUsage ? "Refreshing..." : "Refresh usage"}
-          </button>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gap: isMobile ? 12 : 16 }}>
-        <div style={panelStyle}>
-          <div style={labelStyle}>Plan</div>
-          <div style={{ color: colors.text, fontSize: isMobile ? 20 : 22, fontWeight: 800 }}>{profile.plan}</div>
-        </div>
-        <div style={panelStyle}>
-          <div style={labelStyle}>Rate Limit</div>
-          <div style={{ color: colors.text, fontSize: isMobile ? 16 : 18, fontWeight: 800 }}>500 API Calls / Month</div>
-        </div>
-      </div>
-
-      <div style={panelStyle}>
-        <div style={labelStyle}>Capabilities</div>
-        <div style={{ display: "grid", gap: 10 }}>
-          {capabilities.map(([name, detail]) => (
-            <div key={name} style={{
-              display: "grid",
-              gap: 4,
-              padding: isMobile ? "8px 0" : "10px 0",
-              borderBottom: `1px solid ${colors.border}`,
-            }}>
-              <span style={{ color: colors.text, fontWeight: 700, fontSize: isMobile ? 13 : 14 }}>{name}</span>
-              <span style={{ color: colors.textDim, fontSize: isMobile ? 12 : 13, lineHeight: 1.5 }}>{detail}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gap: isMobile ? 12 : 16 }}>
-        <div style={panelStyle}>
-          <div style={labelStyle}>Documentation</div>
-          <button onClick={() => window.open("/#docs", "_self")} style={{
-            ...getButtonStyle(colors, "faint"),
-            width: "100%",
-          }}>View API Documentation</button>
-        </div>
-        <div style={panelStyle}>
-          <div style={labelStyle}>Account</div>
-          <div style={{ color: colors.text, fontSize: isMobile ? 14 : 15, overflowWrap: "anywhere" }}>{profile.email}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AppContent() {
+// ── Page ──────────────────────────────────────────────────────
+function FhirResourcesContent() {
   const { colors, toggleTheme, theme } = useTheme();
+  const navigate = useNavigate();
+
+  const RESOURCES = ["Patient", "Observation", "Condition", "Encounter", "MedicationRequest", "Bundle"];
   const [activeResource, setActiveResource] = useState("Patient");
-  const [activeSection, setActiveSection] = useState("workspace");
-  const [apiProfile, setApiProfile] = useState(loadApiProfile);
   const [runStatus, setRunStatus] = useState({});
   const [revalidateSignal, setRevalidateSignal] = useState(0);
   const [notifications, setNotifications] = useState([]);
-  const notificationDuration = 4000;
   const [isMobile, setIsMobile] = useState(false);
+  const notificationDuration = 4000;
 
   useEffect(() => {
     if (revalidateSignal > 0) {
@@ -1778,52 +1459,16 @@ function AppContent() {
   }, [revalidateSignal]);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  useEffect(() => {
-    async function loadUsage() {
-      const apiKey = localStorage.getItem("smartfhirApiKey");
-      if (!apiKey) return;
-
-      try {
-        const res = await fetch(`${API_BASE}/usage`, {
-          headers: { "X-API-Key": apiKey },
-        });
-        const data = await res.json();
-
-        if (!res.ok || data.error) return;
-
-        localStorage.setItem("smartfhirEmail", data.email);
-        localStorage.setItem("smartfhirPlan", data.plan || "Free");
-        localStorage.setItem("smartfhirUsage", String(data.calls_used || 0));
-        localStorage.setItem("smartfhirLimit", String(data.calls_limit || 500));
-        localStorage.setItem("smartfhirRemaining", String(data.calls_remaining || (data.calls_limit || 500) - (data.calls_used || 0)));
-        setApiProfile(prev => ({
-          ...prev,
-          email: data.email,
-          plan: data.plan || "Free",
-          usage: data.calls_used || 0,
-          limit: data.calls_limit || 500,
-          remaining: data.calls_remaining || (data.calls_limit || 500) - (data.calls_used || 0),
-        }));
-      } catch (e) {
-        // Keep local values visible if the backend is offline.
-      }
-    }
-
-    loadUsage();
-  }, []);
-
-  function notify(message, type = 'info', durationMs) {
+  function notify(message, type = "info", durationMs) {
     const id = Date.now() + Math.random();
     setNotifications(prev => [...prev, { id, message, type }]);
-    const timeout = typeof durationMs === 'number' ? durationMs : notificationDuration;
+    const timeout = typeof durationMs === "number" ? durationMs : notificationDuration;
     if (timeout && timeout > 0) {
       setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), timeout);
     }
@@ -1841,325 +1486,152 @@ function AppContent() {
     localStorage.removeItem("smartfhirLimit");
     localStorage.removeItem("smartfhirRemaining");
     localStorage.removeItem("smartfhirLastUsed");
-    setApiProfile(loadApiProfile());
-    setActiveSection("workspace");
     notify("Logged out successfully", "success");
     navigate("/");
   }
 
-  const navigate = useNavigate();
-  const RESOURCES = ["Patient", "Observation", "Condition", "Encounter", "MedicationRequest", "Bundle"];
-  const NAV_ITEMS = [
-    { id: "fhir", label: "FHIR Resources", icon: "🧬" },
-    { id: "hl7", label: "HL7 Suite", icon: "🔁", href: "/tools/hl7-suite" },
-    { id: "terminology", label: "Terminology Center", icon: "📚", href: "/tools/terminology" },
-  ];
-
   return (
     <div style={{
-      height: isMobile ? "auto" : "100vh", background: colors.bg,
-      color: colors.text, fontFamily: "'Inter', system-ui, sans-serif",
-      display: "flex", flexDirection: isMobile ? "column" : "row",
+      minHeight: "100vh", background: colors.bg, color: colors.text,
+      fontFamily: "'Inter', system-ui, sans-serif",
       transition: "background 0.3s ease, color 0.3s ease",
-      overflow: isMobile ? "visible" : "hidden",
     }}>
-      <aside style={{
-        width: isMobile ? "0" : 250,
-        position: isMobile ? "relative" : "sticky",
-        top: 0,
-        height: isMobile ? "auto" : "100vh",
-        borderRight: isMobile ? "none" : `1px solid ${colors.border}`,
-        borderBottom: isMobile ? `1px solid ${colors.border}` : "none",
-        background: colors.surface,
-        paddingTop: isMobile ? "16px" : "24px",
-        paddingRight: isMobile ? "16px" : "18px",
-        paddingLeft: isMobile ? "16px" : "18px",
-        display: isMobile ? "none" : "flex",
-        flexDirection: "column",
-        gap: 16,
-        minHeight: 0,
-        overflowY: "auto",
-        paddingBottom: 48,
+      <div style={{
+        position: "sticky", top: 0, zIndex: 20,
+        background: colors.surface, borderBottom: `1px solid ${colors.border}`,
+        padding: isMobile ? "14px 16px" : "14px 24px",
+        display: "flex", flexDirection: isMobile ? "column" : "row",
+        alignItems: isMobile ? "stretch" : "center",
+        justifyContent: "space-between", gap: 12,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: colors.accent,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 18, fontWeight: 800, color: "#fff",
-            letterSpacing: 0,
-          }}>+</div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>MedTechTools</div>
-            <div style={{ color: colors.textDim, fontSize: 12 }}>Dashboard</div>
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gap: 8 }}>
-          {NAV_ITEMS.map(item => (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.href) {
-                  navigate(item.href);
-                } else {
-                  setActiveSection("workspace");
-                }
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                borderRadius: 10,
-                border: item.id === "fhir" ? `1px solid ${colors.accent}44` : `1px solid ${colors.border}`,
-                background: item.id === "fhir" ? colors.accentDim : colors.bg,
-                color: item.id === "fhir" ? colors.accent : colors.text,
-                padding: "10px 12px",
-                cursor: "pointer",
-                fontWeight: item.id === "fhir" ? 700 : 600,
-                textAlign: "left",
-              }}
-            >
-              <span style={{ fontSize: 15 }}>{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </div>
-
-        <div style={{ position: "sticky", bottom: 24, display: "grid", gap: 8, marginTop: "auto", paddingBottom: 8 }}>
-          <button onClick={() => { setActiveSection("api"); setRevalidateSignal(0); }} style={{
-            ...getButtonStyle(colors, "secondary"),
-            background: activeSection === "api" ? colors.accentDim : colors.surface,
-            border: `1px solid ${activeSection === "api" ? colors.accent + "66" : colors.border}`,
-            color: activeSection === "api" ? colors.accent : colors.text,
-          }}>API Center</button>
-          <button onClick={logout} style={{
-            ...getButtonStyle(colors, "primary"),
-            background: colors.error,
-            border: `1px solid ${colors.error}`,
-          }}>Logout</button>
-        </div>
-      </aside>
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
-        <div style={{
-          flexShrink: 0,
-          position: isMobile ? "sticky" : "static",
-          top: isMobile ? 0 : "auto",
-          zIndex: isMobile ? 20 : "auto",
-          background: isMobile ? colors.bg : "transparent",
-          borderBottom: `1px solid ${colors.border}`,
-          padding: isMobile ? "14px 16px" : "14px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-        }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: isMobile ? 16 : 18 }}>FHIR Resources</div>
             <div style={{ color: colors.textDim, fontSize: isMobile ? 12 : 13, marginTop: 2 }}>
               Map and validate your FHIR resources with the built-in pipeline.
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={toggleTheme} style={{
-              background: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 8,
-              padding: "8px 12px",
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-            }}>
-              {theme === "dark" ? "☀️" : "🌙"}
-            </button>
-            <button onClick={() => { notify("Revalidating all resources", "info"); setRevalidateSignal(s => s + 1); }} style={{
-              ...getButtonStyle(colors, "secondary"),
-            }}>Revalidate All</button>
-          </div>
         </div>
-
-        {isMobile && (
-          <div style={{
-            flexShrink: 0,
-            position: "sticky",
-            top: 72,
-            zIndex: 15,
-            borderBottom: `1px solid ${colors.border}`,
-            padding: "12px 16px",
-            background: colors.surface,
-            display: "grid",
-            gap: 14,
-            boxShadow: `0 10px 30px ${colors.shadowLight}`,
-            marginBottom: 8,
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button onClick={toggleTheme} aria-label="Toggle Theme" style={{
+            width: 34, height: 34, borderRadius: 10, border: `1px solid ${colors.border}`,
+            display: "grid", placeItems: "center", background: "transparent", color: colors.text,
+            cursor: "pointer", transition: "all 0.2s"
           }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              {NAV_ITEMS.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    if (item.href) {
-                      navigate(item.href);
-                    } else {
-                      setActiveSection("workspace");
-                    }
-                  }}
-                  style={{
-                    flex: 1,
-                    borderRadius: 10,
-                    border: item.id === "fhir" ? `1px solid ${colors.accent}44` : `1px solid ${colors.border}`,
-                    background: item.id === "fhir" ? colors.accentDim : colors.bg,
-                    color: item.id === "fhir" ? colors.accent : colors.text,
-                    padding: "10px 12px",
-                    cursor: "pointer",
-                    fontWeight: item.id === "fhir" ? 700 : 600,
-                    textAlign: "center",
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            {activeSection !== "api" && (
-              <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ display: "grid", gap: 6 }}>
-                  <label style={{ color: colors.textDim, fontSize: 12, fontWeight: 700 }}>Resource</label>
-                  <select
-                    value={activeResource}
-                    onChange={(e) => setActiveResource(e.target.value)}
-                    style={{
-                      width: "100%",
-                      borderRadius: 10,
-                      border: `1px solid ${colors.border}`,
-                      background: colors.surface,
-                      color: colors.text,
-                      padding: "12px 14px",
-                      fontSize: 14,
-                    }}
-                  >
-                    {RESOURCES.map(resource => (
-                      <option key={resource} value={resource}>{resource}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 12, display: "grid", gap: 10 }}>
-                  {WORKFLOW_STEPS.map((step, index) => (
-                    <div key={step.title} style={{ display: "grid", gap: 4 }}>
-                      <div style={{ color: colors.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                        Step {index + 1}
-                      </div>
-                      <div style={{ color: colors.text, fontSize: 14, fontWeight: 700 }}>{step.title}</div>
-                      <div style={{ color: colors.textDim, fontSize: 12, lineHeight: 1.5 }}>{step.subtitle}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {theme === "dark" ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
             )}
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={() => { setActiveSection("api"); setRevalidateSignal(0); }} style={{
-                ...getButtonStyle(colors, "secondary"),
-                flex: 1,
-              }}>API Center</button>
-              <button onClick={logout} style={{
-                ...getButtonStyle(colors, "primary"),
-                background: colors.error,
-                border: `1px solid ${colors.error}`,
-                flex: 1,
-              }}>Logout</button>
-            </div>
-          </div>
-        )}
-
-        {!isMobile && activeSection !== "api" && (
-          <div style={{
-            flexShrink: 0,
-            borderBottom: `1px solid ${colors.border}`,
-            padding: isMobile ? "12px 16px" : "16px 24px",
-            background: colors.surface,
-            display: "grid",
-            gap: 12,
-          }}>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {RESOURCES.map(r => (
-                <button key={r} onClick={() => { setActiveResource(r); setActiveSection("workspace"); }} style={{
-                  background: activeResource === r ? colors.accentDim : colors.bg,
-                  border: activeResource === r ? `1px solid ${colors.accent}44` : `1px solid ${colors.border}`,
-                  color: activeResource === r ? colors.accent : colors.muted,
-                  borderRadius: 8,
-                  padding: "8px 12px",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  fontWeight: activeResource === r ? 700 : 500,
-                }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                    <span>{r}</span>
-                    {runStatus[r] && (
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: colors.success, display: "inline-block" }} />
-                    )}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-              {WORKFLOW_STEPS.map((step, index) => (
-                <div key={step.title} style={{
-                  flex: isMobile ? "1 1 100%" : "1 1 140px",
-                  minWidth: isMobile ? "auto" : 140,
-                  background: colors.bg,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 8,
-                  padding: isMobile ? "8px 10px" : "10px 12px",
-                  boxShadow: `0 2px 6px ${colors.shadow}`,
-                }}>
-                  <div style={{ color: colors.accent, fontSize: isMobile ? 9 : 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
-                    {`Step ${index + 1}`}
-                  </div>
-                  <div style={{ color: colors.text, fontSize: isMobile ? 12 : 13, fontWeight: 700, marginBottom: 4 }}>
-                    {step.title}
-                  </div>
-                  <div style={{ color: colors.textDim, fontSize: isMobile ? 10 : 11, lineHeight: 1.4 }}>
-                    {step.subtitle}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: isMobile ? "12px 16px 24px" : "24px" }}>
-          <div style={{ display: activeSection === "api" ? "block" : "none", minHeight: 0 }}>
-            <ApiCenter profile={apiProfile} setProfile={setApiProfile} onNotify={notify} onClose={() => { setActiveSection("workspace"); setRevalidateSignal(0); }} isMobile={isMobile} />
-          </div>
-          <div style={{ display: activeSection === "api" ? "none" : "block", height: "100%" }}>
-            {RESOURCES.map(r => (
-              <div key={r} style={{ display: activeResource === r ? "block" : "none", height: "100%" }}>
-                {r === "Bundle" ? (
-                  <BundlePanel onNotify={notify} isMobile={isMobile} />
-                ) : (
-                  <ResourcePanel
-                    type={r}
-                    onRun={(resName, has) => setRunStatus(prev => ({ ...prev, [resName]: has }))}
-                    revalidateSignal={revalidateSignal}
-                    onNotify={notify}
-                    isMobile={isMobile}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-          <Notifications items={notifications} remove={removeNotification} />
+          </button>
+          <button
+            onClick={() => {
+              notify("Revalidating all resources…", "info");
+              setRevalidateSignal(s => s + 1);
+            }}
+            style={{
+              border: `1px solid ${colors.accent}`, background: colors.accentDim, color: colors.accent,
+              borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = colors.accent + "33"}
+            onMouseLeave={(e) => e.currentTarget.style.background = colors.accentDim}
+          >
+            ↻ Revalidate All
+          </button>
+          <button onClick={() => navigate("/api-key")} style={{
+            border: `1px solid ${colors.border}`, background: "transparent", color: colors.text,
+            borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+          }} onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            Manage API
+          </button>
+          <button onClick={() => navigate("/tools")} style={{
+            border: `1px solid ${colors.border}`, background: "transparent", color: colors.text,
+            borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+          }} onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            Back to tools
+          </button>
+          <button onClick={logout} style={{
+            border: "1px solid #ef4444", background: "transparent", color: "#ef4444",
+            borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+          }} onMouseEnter={(e) => e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            Logout
+          </button>
         </div>
+      </div>
+
+      <div style={{
+        borderBottom: `1px solid ${colors.border}`,
+        padding: isMobile ? "12px 16px" : "16px 24px",
+        background: colors.surface,
+        display: "grid", gap: 12,
+      }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {RESOURCES.map(r => (
+            <button key={r} onClick={() => setActiveResource(r)} style={{
+              background: activeResource === r ? colors.accentDim : colors.bg,
+              border: activeResource === r ? `1px solid ${colors.accent}44` : `1px solid ${colors.border}`,
+              color: activeResource === r ? colors.accent : colors.muted,
+              borderRadius: 8, padding: "8px 12px", cursor: "pointer",
+              fontSize: 13, fontWeight: activeResource === r ? 700 : 500,
+            }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span>{r}</span>
+                {runStatus[r] && (
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: colors.success, display: "inline-block" }} />
+                )}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+          {WORKFLOW_STEPS.map((step, index) => (
+            <div key={step.title} style={{
+              flex: isMobile ? "1 1 100%" : "1 1 140px",
+              minWidth: isMobile ? "auto" : 140,
+              background: colors.bg, border: `1px solid ${colors.border}`,
+              borderRadius: 8, padding: isMobile ? "8px 10px" : "10px 12px",
+              boxShadow: `0 2px 6px ${colors.shadow}`,
+            }}>
+              <div style={{ color: colors.accent, fontSize: isMobile ? 9 : 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
+                {`Step ${index + 1}`}
+              </div>
+              <div style={{ color: colors.text, fontSize: isMobile ? 12 : 13, fontWeight: 700, marginBottom: 4 }}>
+                {step.title}
+              </div>
+              <div style={{ color: colors.textDim, fontSize: isMobile ? 10 : 11, lineHeight: 1.4 }}>
+                {step.subtitle}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: isMobile ? "12px 16px 24px" : "24px" }}>
+        {RESOURCES.map(r => (
+          <div key={r} style={{ display: activeResource === r ? "block" : "none" }}>
+            {r === "Bundle" ? (
+              <BundlePanel onNotify={notify} isMobile={isMobile} />
+            ) : (
+              <ResourcePanel
+                type={r}
+                onRun={(resName, has) => setRunStatus(prev => ({ ...prev, [resName]: has }))}
+                revalidateSignal={revalidateSignal}
+                onNotify={notify}
+                isMobile={isMobile}
+              />
+            )}
+          </div>
+        ))}
+        <Notifications items={notifications} remove={removeNotification} />
       </div>
     </div>
   );
 }
 
-export default function App() {
+export default function FhirResourcesPage() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <FhirResourcesContent />
     </ThemeProvider>
   );
 }

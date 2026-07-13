@@ -18,6 +18,21 @@ const THEMES = {
     shadow: "rgba(0, 0, 0, 0.3)",
     shadowLight: "rgba(79, 142, 247, 0.1)",
   },
+  light: {
+    bg: "#F8FAFC",
+    surface: "#FFFFFF",
+    border: "#E2E8F0",
+    accent: "#3B82F6",
+    accentDim: "#DBEAFE",
+    success: "#10B981",
+    warning: "#F59E0B",
+    error: "#EF4444",
+    muted: "#64748B",
+    text: "#1E293B",
+    textDim: "#64748B",
+    shadow: "rgba(0, 0, 0, 0.1)",
+    shadowLight: "rgba(59, 130, 246, 0.1)",
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -350,32 +365,70 @@ function findTerminologyCodes(prompt) {
 // UTILITY COMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function FilterChip({ label, active, onClick, colors }) {
+function FilterChip({ label, active, onClick, colors, count, variant = "default" }) {
+  const isSystemRow = variant === "system";
   return (
     <button
       onClick={onClick}
       style={{
         padding: "8px 14px",
         borderRadius: 20,
-        border: active ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
+        border: active 
+          ? `1px solid ${isSystemRow ? colors.accent : colors.border}` 
+          : `1px solid ${isSystemRow ? colors.accent + "66" : colors.border}`,
         background: active
-          ? `linear-gradient(135deg, ${colors.accent}22, ${colors.accent}11)`
-          : colors.surface,
+          ? isSystemRow 
+            ? `linear-gradient(135deg, ${colors.accent}22, ${colors.accent}11)`
+            : colors.bg
+          : isSystemRow 
+            ? colors.accent + "15"
+            : colors.surface,
         color: active ? colors.accent : colors.text,
         cursor: "pointer",
         fontWeight: active ? 700 : 500,
         fontSize: 13,
         transition: "all 0.2s ease",
         whiteSpace: "nowrap",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
       }}
     >
       {label}
+      {count !== undefined && (
+        <span style={{
+          background: active ? (isSystemRow ? colors.accent + "33" : colors.bg) : colors.bg,
+          color: active ? colors.accent : colors.textDim,
+          padding: "2px 6px",
+          borderRadius: 10,
+          fontSize: 11,
+          fontWeight: 600,
+        }}>
+          {count}
+        </span>
+      )}
     </button>
   );
 }
 
+function getSystemStatus(system) {
+  // Mock status logic based on system type
+  const statusMap = {
+    "SNOMED CT": { status: "Active", version: "v4.0.1", color: "#34D399" },
+    "ICD-10": { status: "Active", version: "v2023", color: "#34D399" },
+    "LOINC": { status: "Active", version: "v2.74", color: "#34D399" },
+    "RxNorm": { status: "Active", version: "v5.0.1", color: "#34D399" },
+    "FHIR ValueSet": { status: "Active", version: "R4", color: "#34D399" },
+    "Code System": { status: "Active", version: "R4", color: "#34D399" },
+  };
+  return statusMap[system] || { status: "Active", version: "", color: "#34D399" };
+}
+
 function TerminologyCard({ result, colors, onSelect, onCopy, favorites, onToggleFavorite }) {
-  const isFavorited = favorites.includes(result.code);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const isLongDescription = result.description && result.description.length > 120;
+  const systemStatus = getSystemStatus(result.system);
   
   return (
     <div
@@ -385,191 +438,294 @@ function TerminologyCard({ result, colors, onSelect, onCopy, favorites, onToggle
         background: colors.surface,
         border: `1px solid ${colors.border}`,
         borderRadius: 12,
-        padding: 16,
+        padding: 18,
         cursor: "pointer",
         transition: "all 0.3s ease",
         boxShadow: `0 2px 8px ${colors.shadow}`,
-        display: "grid",
-        gap: 10,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        gap: 12,
+        position: "relative",
+        minHeight: 240,
       }}
       onMouseEnter={(e) => {
+        setIsHovered(true);
         e.currentTarget.style.borderColor = colors.accent;
         e.currentTarget.style.boxShadow = `0 4px 16px ${colors.shadowLight}`;
+        e.currentTarget.style.transform = "translateY(-2px)";
       }}
       onMouseLeave={(e) => {
+        setIsHovered(false);
         e.currentTarget.style.borderColor = colors.border;
         e.currentTarget.style.boxShadow = `0 2px 8px ${colors.shadow}`;
+        e.currentTarget.style.transform = "translateY(0)";
       }}
     >
-      {/* Header with system badge and favorite */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 8 }}>
-        <div
-          style={{
-            background: colors.accentDim,
-            color: colors.accent,
-            padding: "4px 10px",
-            borderRadius: 6,
-            fontSize: 11,
-            fontWeight: 700,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {result.system}
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(result.code);
-          }}
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 16,
-            opacity: isFavorited ? 1 : 0.4,
-            transition: "all 0.2s ease",
-          }}
-        >
-          ★
-        </button>
-      </div>
+      {/* Top row: System badge, Code with copy button, and Category badge */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+          {/* Identifiers Group: Code first, then System Badge */}
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <div
+              style={{
+                color: "#FFFFFF",
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                fontSize: 15,
+                fontWeight: 800,
+                letterSpacing: "0.5px",
+              }}
+            >
+              {result.code}
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCopy("code", result.code);
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: colors.muted,
+                cursor: "pointer",
+                padding: "2px 4px",
+                fontSize: 12,
+                transition: "color 0.2s ease",
+                display: "inline-flex",
+                alignItems: "center",
+                verticalAlign: "middle",
+              }}
+              title="Copy code"
+              onMouseEnter={(e) => (e.currentTarget.style.color = colors.text)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = colors.muted)}
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
 
-      {/* Code */}
-      <div>
-        <div style={{ color: colors.textDim, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>
-          CODE
-        </div>
-        <div
-          style={{
-            color: colors.accent,
-            fontFamily: "monospace",
-            fontSize: 14,
-            fontWeight: 700,
-          }}
-        >
-          {result.code}
-        </div>
-      </div>
+          <div
+            style={{
+              background: colors.accentDim,
+              color: colors.accent,
+              padding: "3px 8px",
+              borderRadius: 6,
+              fontSize: 10,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {result.system}
+          </div>
 
-      {/* Display Name */}
-      <div>
-        <div style={{ color: colors.text, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>
-          {result.display}
+          {systemStatus.version && (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                background: systemStatus.color + "22",
+                color: systemStatus.color,
+                padding: "3px 8px",
+                borderRadius: 6,
+                fontSize: 10,
+                fontWeight: 700,
+                alignSelf: "center",
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: systemStatus.color }} />
+              <span>{systemStatus.version}</span>
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Description */}
-      <div
-        style={{
-          color: colors.textDim,
-          fontSize: 12,
-          lineHeight: 1.5,
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}
-      >
-        {result.description}
-      </div>
-
-      {/* Category */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {/* Category badge styled as a background-tinted border badge */}
         <span
           style={{
-            background: colors.accent + "22",
-            color: colors.accent,
-            padding: "4px 8px",
-            borderRadius: 4,
-            fontSize: 11,
-            fontWeight: 600,
+            background: "rgba(255, 255, 255, 0.04)",
+            border: `1px solid ${colors.border}`,
+            color: colors.textDim,
+            padding: "3px 8px",
+            borderRadius: 6,
+            fontSize: 10,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
           }}
         >
           {result.category}
         </span>
-        {typeof result.confidence === "number" && (
-          <span
-            style={{
-              background: colors.success + "22",
-              color: colors.success,
-              padding: "4px 8px",
-              borderRadius: 4,
-              fontSize: 11,
-              fontWeight: 700,
-            }}
-          >
-            {result.confidence}% match
-          </span>
-        )}
-        {result.matchReason?.slice(0, 2).map((reason) => (
-          <span
-            key={reason}
-            style={{
-              background: colors.bg,
-              color: colors.textDim,
-              border: `1px solid ${colors.border}`,
-              padding: "4px 8px",
-              borderRadius: 4,
-              fontSize: 11,
-              fontWeight: 600,
-            }}
-          >
-            {reason}
-          </span>
-        ))}
       </div>
 
-      {/* Actions */}
-      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onCopy("code", result.code);
-          }}
+      {/* Concept Name - Primary Heading */}
+      <div style={{ color: "#FFFFFF", fontSize: 17, fontWeight: 800, lineHeight: 1.3 }}>
+        {result.display}
+      </div>
+
+      {/* Description with truncation */}
+      <div style={{ flex: 1 }}>
+        <div
           style={{
-            flex: 1,
-            background: colors.bg,
-            border: `1px solid ${colors.border}`,
-            color: colors.text,
-            borderRadius: 6,
-            padding: "6px 10px",
-            cursor: "pointer",
-            fontSize: 11,
-            fontWeight: 600,
-            transition: "all 0.2s ease",
+            color: "rgba(255, 255, 255, 0.6)",
+            fontSize: 13,
+            lineHeight: 1.5,
+            display: isExpanded ? "block" : "-webkit-box",
+            WebkitLineClamp: isExpanded ? "unset" : 2,
+            WebkitBoxOrient: "vertical",
+            overflow: isExpanded ? "visible" : "hidden",
           }}
         >
-          Copy Code
-        </button>
+          {result.description}
+        </div>
+        {isLongDescription && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              color: colors.accent,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              padding: 0,
+              marginTop: 4,
+            }}
+          >
+            {isExpanded ? "Show less" : "..."}
+          </button>
+        )}
+      </div>
+
+      {/* Bottom row: Match indicator and FHIR button */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {typeof result.confidence === "number" && (
+            <span
+              style={{
+                background: colors.success + "22",
+                color: colors.success,
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+            >
+              {result.confidence}% match
+            </span>
+          )}
+          {result.matchReason?.slice(0, 1).map((reason) => (
+            <span
+              key={reason}
+              style={{
+                background: colors.bg,
+                color: colors.textDim,
+                border: `1px solid ${colors.border}`,
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            >
+              {reason}
+            </span>
+          ))}
+        </div>
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onCopy("fhir", JSON.stringify({
-              coding: [{
-                system: result.fhirSystem,
-                code: result.code,
-                display: result.display,
-              }],
-            }, null, 2));
+            onCopy(
+              "fhir",
+              JSON.stringify(
+                {
+                  coding: [
+                    {
+                      system: result.fhirSystem,
+                      code: result.code,
+                      display: result.display,
+                    },
+                  ],
+                },
+                null,
+                2
+              )
+            );
           }}
           style={{
-            flex: 1,
-            background: colors.accent,
+            background: colors.accent + "15",
             border: `1px solid ${colors.accent}`,
-            color: "#fff",
+            color: colors.accent,
             borderRadius: 6,
-            padding: "6px 10px",
+            padding: "6px 12px",
             cursor: "pointer",
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             transition: "all 0.2s ease",
+            whiteSpace: "nowrap",
           }}
         >
-          Generate FHIR
+          ⚡ Generate FHIR
         </button>
       </div>
+
+      {/* View Raw JSON link - appears on hover */}
+      {isHovered && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onCopy(
+              "fhir",
+              JSON.stringify(
+                {
+                  coding: [
+                    {
+                      system: result.fhirSystem,
+                      code: result.code,
+                      display: result.display,
+                    },
+                  ],
+                },
+                null,
+                2
+              )
+            );
+          }}
+          style={{
+            position: "absolute",
+            bottom: 8,
+            right: 8,
+            background: "none",
+            border: "none",
+            color: colors.textDim,
+            fontSize: 11,
+            fontWeight: 500,
+            cursor: "pointer",
+            padding: 0,
+            zIndex: 10,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = colors.accent)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = colors.textDim)}
+        >
+          View Raw JSON →
+        </button>
+      )}
     </div>
   );
+
 }
 
 function DetailPanel({ selected, colors, onCopy, onClose, panelRef }) {
@@ -1092,6 +1248,26 @@ function ClinicalCodingAssistant({ colors, isMobile, notify }) {
   const [backendAnalysis, setBackendAnalysis] = useState(null);
   const [analysisError, setAnalysisError] = useState("");
 
+  // Dropdown States
+  const [activeCopyDropdown, setActiveCopyDropdown] = useState(false);
+  const [activeExportDropdown, setActiveExportDropdown] = useState(false);
+
+  const copyRef = useRef(null);
+  const exportRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (copyRef.current && !copyRef.current.contains(event.target)) {
+        setActiveCopyDropdown(false);
+      }
+      if (exportRef.current && !exportRef.current.contains(event.target)) {
+        setActiveExportDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const detectedConcepts = useMemo(() => {
     if (!hasAnalyzed) return [];
     if (backendAnalysis) return conceptsFromBackendAnalysis(backendAnalysis);
@@ -1116,10 +1292,16 @@ function ClinicalCodingAssistant({ colors, isMobile, notify }) {
     setBackendAnalysis(null);
     setAnalysisError("");
 
+    const apiKey = localStorage.getItem("smartfhirApiKey");
+    const headers = {
+      "Content-Type": "application/json",
+      ...(apiKey ? { "X-API-Key": apiKey } : {}),
+    };
+
     try {
       const response = await fetch(`${API_BASE}/api/clinical-note/analyze`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ text: clinicalText }),
       });
       const data = await response.json();
@@ -1158,6 +1340,16 @@ function ClinicalCodingAssistant({ colors, isMobile, notify }) {
     notify("PDF-ready summary exported as text", "success");
   }
 
+  const getResourceBadgeStyle = (resourceType) => {
+    const styleMap = {
+      Condition: { color: "#C084FC", background: "rgba(192, 132, 252, 0.15)", border: "1px solid rgba(192, 132, 252, 0.4)" }, // soft purple
+      MedicationRequest: { color: "#818CF8", background: "rgba(129, 140, 248, 0.15)", border: "1px solid rgba(129, 140, 248, 0.4)" }, // soft indigo
+      Observation: { color: "#FB923C", background: "rgba(251, 146, 60, 0.15)", border: "1px solid rgba(251, 146, 60, 0.4)" }, // soft orange
+      Procedure: { color: "#2DD4BF", background: "rgba(45, 212, 191, 0.15)", border: "1px solid rgba(45, 212, 191, 0.4)" }, // soft teal
+    };
+    return styleMap[resourceType] || { color: "#34D399", background: "rgba(52, 211, 153, 0.15)", border: "1px solid rgba(52, 211, 153, 0.4)" };
+  };
+
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 24, display: "grid", gap: 16 }}>
@@ -1190,76 +1382,533 @@ function ClinicalCodingAssistant({ colors, isMobile, notify }) {
 
       {!isAnalyzing && hasAnalyzed && detectedConcepts.length > 0 && (
         <>
-          <div style={{ background: analysisSource === "medspacy" ? colors.success + "18" : colors.warning + "18", border: `1px solid ${analysisSource === "medspacy" ? colors.success + "44" : colors.warning + "44"}`, borderRadius: 12, padding: 14, color: colors.text, display: "grid", gap: 8 }}>
-            <div style={{ fontWeight: 800 }}>
-              {analysisSource === "medspacy" ? "Analyzed by backend medSpaCy pipeline" : "Analyzed by local fallback"}
-            </div>
-            {analysisError && <div style={{ color: colors.textDim, fontSize: 13 }}>{analysisError}</div>}
-            {backendAnalysis?.negated_or_ignored?.length > 0 && (
-              <div style={{ color: colors.textDim, fontSize: 13 }}>
-                Negated or ignored: {backendAnalysis.negated_or_ignored.join(", ")}
+          {/* Status Alert Banner */}
+          {analysisSource === "medspacy" ? (
+            <div
+              style={{
+                background: "rgba(2, 44, 34, 0.2)",
+                border: "1px solid rgba(6, 78, 59, 0.5)",
+                color: "#34D399",
+                padding: "12px",
+                borderRadius: "8px",
+                fontSize: 13,
+                display: "flex",
+                alignItems: "start",
+                gap: 10,
+              }}
+            >
+              <span style={{ fontSize: 16 }}>✨</span>
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontWeight: 700 }}>Analyzed by backend medSpaCy pipeline</div>
+                {backendAnalysis?.negated_or_ignored?.length > 0 && (
+                  <div style={{ color: "rgba(255, 255, 255, 0.6)", fontSize: 12 }}>
+                    Negated or ignored context: {backendAnalysis.negated_or_ignored.join(", ")}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                background: "rgba(69, 26, 3, 0.2)",
+                border: "1px solid rgba(120, 53, 15, 0.5)",
+                color: "#FBBF24",
+                padding: "12px",
+                borderRadius: "8px",
+                fontSize: 13,
+                display: "flex",
+                alignItems: "start",
+                gap: 10,
+              }}
+            >
+              <span style={{ fontSize: 16 }}>⚠️</span>
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontWeight: 700 }}>Analyzed by local dictionary fallback</div>
+                <div style={{ color: "rgba(255, 255, 255, 0.6)", fontSize: 12 }}>
+                  {analysisError || "The backend NLP analyzer was unreachable. Displaying results using the client-side clinical mapper."}
+                </div>
+              </div>
+            </div>
+          )}
 
-          <div style={{ display: "grid", gap: 14 }}>
+          {/* Tables block */}
+          <div style={{ display: "grid", gap: 20 }}>
             {CLINICAL_SECTIONS.map((section) => {
               const concepts = detectedConcepts.filter((concept) => concept.section === section.id);
               if (concepts.length === 0) return null;
               return (
-                <div key={section.id} style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 18, display: "grid", gap: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-                    <h3 style={{ margin: 0, fontSize: 17 }}>{section.title}</h3>
-                    <span style={{ color: colors.textDim, fontSize: 12 }}>{section.columns.join(" | ")}</span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
-                    {concepts.map((concept) => (
-                      <button key={concept.id} onClick={() => setSelectedConceptId(concept.id)} style={{ background: colors.bg, color: colors.text, border: `1px solid ${selectedConcept?.id === concept.id ? colors.accent : colors.border}`, borderRadius: 10, padding: 14, textAlign: "left", cursor: "pointer", display: "grid", gap: 10 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}><strong>{concept.label}</strong><span style={{ color: colors.success, fontWeight: 800 }}>{concept.confidence}%</span></div>
-                        <div style={{ display: "grid", gap: 5 }}>{concept.codes.map((code) => <div key={`${concept.id}-${code.systemName}`} style={{ color: colors.textDim, fontSize: 13 }}><strong style={{ color: colors.accent }}>{code.systemName}</strong> {code.code} - {code.display}</div>)}</div>
-                        {(concept.genericName || concept.brandName || concept.units || concept.doseInfo || concept.value) && <div style={{ color: colors.textDim, fontSize: 12 }}>{[concept.genericName && `Generic: ${concept.genericName}`, concept.brandName && `Brand: ${concept.brandName}`, concept.doseInfo && `Dose: ${concept.doseInfo}`, concept.value && `Value: ${concept.value}`, concept.units && `Units: ${concept.units}`].filter(Boolean).join(" | ")}</div>}
-                        <div style={{ color: colors.textDim, fontSize: 12, lineHeight: 1.5 }}>{concept.reason}</div>
-                        <div style={{ color: colors.warning, fontSize: 12 }}>Related: {concept.relatedCodes.join(", ")}</div>
-                      </button>
-                    ))}
+                <div
+                  key={section.id}
+                  style={{
+                    background: colors.surface,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: 12,
+                    padding: 20,
+                    display: "grid",
+                    gap: 16,
+                    boxShadow: `0 2px 8px ${colors.shadow}`,
+                  }}
+                >
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: colors.text }}>
+                    {section.title}
+                  </h3>
+
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
+                      <thead>
+                        <tr style={{ borderBottom: `2px solid ${colors.border}` }}>
+                          <th style={{ textAlign: "left", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", width: "25%" }}>Entity / Text</th>
+                          <th style={{ textAlign: "left", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", width: "35%" }}>System & Code</th>
+                          <th style={{ textAlign: "center", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", width: "12%" }}>Confidence</th>
+                          <th style={{ textAlign: "left", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", width: "28%" }}>Rationale / Context</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {concepts.map((concept) => {
+                          const isSelected = selectedConcept?.id === concept.id;
+                          return (
+                            <tr
+                              key={concept.id}
+                              onClick={() => setSelectedConceptId(concept.id)}
+                              style={{
+                                borderBottom: `1px solid ${colors.border}`,
+                                cursor: "pointer",
+                                background: isSelected ? "rgba(79, 142, 247, 0.05)" : "transparent",
+                                transition: "background 0.2s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSelected) e.currentTarget.style.background = colors.bg;
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSelected) e.currentTarget.style.background = "transparent";
+                              }}
+                            >
+                              {/* Entity / Text */}
+                              <td style={{ padding: "14px 8px", color: isSelected ? colors.accent : colors.text, fontWeight: 700, fontSize: 14 }}>
+                                {concept.label}
+                                {(concept.genericName || concept.brandName || concept.units || concept.doseInfo || concept.value) && (
+                                  <div style={{ color: colors.textDim, fontSize: 11, fontWeight: 500, marginTop: 4 }}>
+                                    {[
+                                      concept.genericName && `Generic: ${concept.genericName}`,
+                                      concept.brandName && `Brand: ${concept.brandName}`,
+                                      concept.doseInfo && `Dose: ${concept.doseInfo}`,
+                                      concept.value && `Value: ${concept.value}`,
+                                      concept.units && `Units: ${concept.units}`
+                                    ].filter(Boolean).join(" | ")}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* System & Code */}
+                              <td style={{ padding: "14px 8px" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                  {concept.codes.map((code) => (
+                                    <div key={`${concept.id}-${code.systemName}`} style={{ fontSize: 13, color: colors.textDim }}>
+                                      <strong style={{ color: colors.accent, fontWeight: 700 }}>{code.systemName}:</strong>{" "}
+                                      <code style={{ fontFamily: "monospace", color: colors.text }}>{code.code}</code>{" "}
+                                      <span style={{ fontSize: 11, opacity: 0.8 }}>• {code.display}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+
+                              {/* Confidence */}
+                              <td style={{ padding: "14px 8px", textAlign: "center" }}>
+                                <span
+                                  style={{
+                                    background: "rgba(52, 211, 153, 0.1)",
+                                    color: colors.success,
+                                    padding: "4px 10px",
+                                    borderRadius: 12,
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    display: "inline-block",
+                                  }}
+                                >
+                                  {concept.confidence}%
+                                </span>
+                              </td>
+
+                              {/* Rationale / Context */}
+                              <td style={{ padding: "14px 8px", color: colors.textDim, fontSize: 12, lineHeight: 1.5 }}>
+                                {concept.reason}
+                                {concept.relatedCodes && concept.relatedCodes.length > 0 && (
+                                  <div style={{ color: colors.warning, fontSize: 11, marginTop: 4, fontWeight: 500 }}>
+                                    Related: {concept.relatedCodes.join(", ")}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               );
             })}
           </div>
 
+          {/* FHIR Checklist and preview */}
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 18, display: "grid", gap: 12 }}>
-              <h3 style={{ margin: 0 }}>Suggested FHIR Resources</h3>
-              {detectedConcepts.map((concept) => <div key={`resource-${concept.id}`} style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 8, padding: 10 }}><div><div style={{ fontWeight: 800 }}>{concept.resourceType}</div><div style={{ color: colors.textDim, fontSize: 12 }}>{concept.label}</div></div><button onClick={() => setSelectedConceptId(concept.id)} style={{ background: colors.accent, color: "#fff", border: "none", borderRadius: 7, padding: "8px 10px", cursor: "pointer", fontWeight: 700 }}>Generate Resource</button></div>)}
-              <button onClick={() => copyValue("bundle", JSON.stringify(bundle, null, 2))} style={{ background: colors.success, color: "#071119", border: "none", borderRadius: 8, padding: "11px 14px", cursor: "pointer", fontWeight: 900 }}>Generate Complete Bundle</button>
-            </div>
-            <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 18, display: "grid", gap: 12 }}>
-              <h3 style={{ margin: 0 }}>FHIR Preview</h3>
-              <pre style={{ margin: 0, background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 8, padding: 12, color: colors.textDim, overflow: "auto", maxHeight: 360, fontSize: 12 }}>{JSON.stringify(selectedResource || bundle, null, 2)}</pre>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button onClick={() => selectedConcept && copyValue("code", selectedConcept.codes[0].code)} style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: 7, padding: "8px 10px", cursor: "pointer", fontWeight: 700 }}>Copy Code</button>
-                <button onClick={() => selectedResource && copyValue("JSON", JSON.stringify(selectedResource, null, 2))} style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: 7, padding: "8px 10px", cursor: "pointer", fontWeight: 700 }}>Copy JSON</button>
-                <button onClick={() => selectedConcept && copyValue("FHIR Coding", JSON.stringify(makeFhirCoding(selectedConcept), null, 2))} style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: 7, padding: "8px 10px", cursor: "pointer", fontWeight: 700 }}>Copy FHIR Coding</button>
-                <button onClick={() => copyValue("bundle", JSON.stringify(bundle, null, 2))} style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: 7, padding: "8px 10px", cursor: "pointer", fontWeight: 700 }}>Copy Bundle</button>
+            {/* Actionable FHIR Checklist */}
+            <div
+              style={{
+                background: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 12,
+                padding: 20,
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+                boxShadow: `0 2px 8px ${colors.shadow}`,
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: colors.text }}>Suggested FHIR Resources</h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+                {detectedConcepts.map((concept) => {
+                  const badgeStyle = getResourceBadgeStyle(concept.resourceType);
+                  const isSelected = selectedConcept?.id === concept.id;
+                  return (
+                    <div
+                      key={`resource-${concept.id}`}
+                      onClick={() => setSelectedConceptId(concept.id)}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        background: colors.bg,
+                        border: `1px solid ${isSelected ? colors.accent : colors.border}`,
+                        borderRadius: 10,
+                        padding: "12px 16px",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) e.currentTarget.style.borderColor = colors.accent;
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) e.currentTarget.style.borderColor = colors.border;
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        {/* Resource type badge */}
+                        <span
+                          style={{
+                            color: badgeStyle.color,
+                            background: badgeStyle.background,
+                            border: badgeStyle.border,
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          {concept.resourceType}
+                        </span>
+                        <span style={{ color: colors.text, fontWeight: 600, fontSize: 14 }}>
+                          {concept.label}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedConceptId(concept.id);
+                        }}
+                        style={{
+                          background: isSelected ? colors.accent : colors.surface,
+                          color: isSelected ? "#fff" : colors.text,
+                          border: `1px solid ${isSelected ? "transparent" : colors.border}`,
+                          borderRadius: 6,
+                          padding: "6px 12px",
+                          cursor: "pointer",
+                          fontWeight: 700,
+                          fontSize: 12,
+                          transition: "all 0.2s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = colors.accentDim;
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = colors.surface;
+                        }}
+                      >
+                        Generate Resource
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button onClick={exportJson} style={{ background: colors.accent, color: "#fff", border: "none", borderRadius: 7, padding: "8px 10px", cursor: "pointer", fontWeight: 700 }}>Export JSON</button>
-                <button onClick={() => downloadTextFile("clinical-coding-bundle.json", JSON.stringify(bundle, null, 2), "application/fhir+json")} style={{ background: colors.accent, color: "#fff", border: "none", borderRadius: 7, padding: "8px 10px", cursor: "pointer", fontWeight: 700 }}>Export FHIR Bundle</button>
-                <button onClick={exportPdfSummary} style={{ background: colors.accent, color: "#fff", border: "none", borderRadius: 7, padding: "8px 10px", cursor: "pointer", fontWeight: 700 }}>Export PDF Summary</button>
-                <button onClick={exportCsv} style={{ background: colors.accent, color: "#fff", border: "none", borderRadius: 7, padding: "8px 10px", cursor: "pointer", fontWeight: 700 }}>Export CSV</button>
+              
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                <button
+                  onClick={() => {
+                    copyValue("bundle", JSON.stringify(bundle, null, 2));
+                    notify("Complete bundle copied to clipboard!", "success");
+                  }}
+                  style={{
+                    background: `linear-gradient(135deg, ${colors.success}, #10b981)`,
+                    color: "#071119",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "11px 18px",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    fontSize: 14,
+                    boxShadow: "0 4px 14px rgba(52, 211, 153, 0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  ⚡ Generate Complete Bundle
+                </button>
+              </div>
+            </div>
+
+            {/* FHIR Preview IDE Window */}
+            <div
+              style={{
+                background: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 12,
+                padding: 20,
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+                boxShadow: `0 2px 8px ${colors.shadow}`,
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: colors.text }}>FHIR Preview</h3>
+
+
+              {/* IDE Code block wrapper */}
+              <div style={{ display: "flex", flexDirection: "column", borderRadius: 8, overflow: "hidden", border: `1px solid ${colors.border}` }}>
+                {/* Header Toolbar */}
+                <div style={{ background: colors.surface, borderBottom: `1px solid ${colors.border}`, padding: "8px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontFamily: "monospace", fontSize: 12, color: colors.textDim, fontWeight: 600 }}>
+                    Preview: {selectedConcept && selectedConcept.id ? `${selectedConcept.id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.json` : "type-2-diabetes.json"}
+                  </span>
+                  <span style={{ fontSize: 11, color: colors.accent, fontWeight: 700, textTransform: "uppercase" }}>JSON</span>
+                </div>
+                
+                {/* Code body */}
+                <pre
+                  style={{
+                    margin: 0,
+                    background: "#020617", // True dark code container panel (bg-slate-950)
+                    padding: 16,
+                    color: "rgba(255, 255, 255, 0.75)",
+                    overflow: "auto",
+                    maxHeight: 330,
+                    fontSize: 12,
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {JSON.stringify(selectedResource || bundle, null, 2)}
+                </pre>
+              </div>
+
+              {/* Consolidated Action Dropdowns */}
+              <div style={{ display: "flex", gap: 10, position: "relative" }}>
+                {/* Copy Dropdown */}
+                <div ref={copyRef} style={{ position: "relative" }}>
+                  <button
+                    onClick={() => setActiveCopyDropdown(!activeCopyDropdown)}
+                    style={{
+                      background: colors.bg,
+                      color: colors.text,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: 8,
+                      padding: "8px 14px",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    📋 Copy... <span style={{ fontSize: 10 }}>▼</span>
+                  </button>
+                  {activeCopyDropdown && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "100%",
+                        left: 0,
+                        marginBottom: 6,
+                        background: colors.surface,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: 8,
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                        zIndex: 20,
+                        minWidth: 160,
+                        display: "flex",
+                        flexDirection: "column",
+                        padding: 4,
+                      }}
+                    >
+                      <button
+                        onClick={() => {
+                          if (selectedConcept) copyValue("code", selectedConcept.codes[0].code);
+                          setActiveCopyDropdown(false);
+                        }}
+                        style={{ background: "transparent", border: "none", color: colors.text, padding: "8px 12px", textAlign: "left", cursor: "pointer", borderRadius: 6, fontSize: 13 }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Copy Code
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (selectedResource) copyValue("JSON", JSON.stringify(selectedResource, null, 2));
+                          setActiveCopyDropdown(false);
+                        }}
+                        style={{ background: "transparent", border: "none", color: colors.text, padding: "8px 12px", textAlign: "left", cursor: "pointer", borderRadius: 6, fontSize: 13 }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Copy JSON
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (selectedConcept) copyValue("FHIR Coding", JSON.stringify(makeFhirCoding(selectedConcept), null, 2));
+                          setActiveCopyDropdown(false);
+                        }}
+                        style={{ background: "transparent", border: "none", color: colors.text, padding: "8px 12px", textAlign: "left", cursor: "pointer", borderRadius: 6, fontSize: 13 }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Copy FHIR Coding
+                      </button>
+                      <button
+                        onClick={() => {
+                          copyValue("bundle", JSON.stringify(bundle, null, 2));
+                          setActiveCopyDropdown(false);
+                        }}
+                        style={{ background: "transparent", border: "none", color: colors.text, padding: "8px 12px", textAlign: "left", cursor: "pointer", borderRadius: 6, fontSize: 13 }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Copy Bundle
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Export Dropdown */}
+                <div ref={exportRef} style={{ position: "relative" }}>
+                  <button
+                    onClick={() => setActiveExportDropdown(!activeExportDropdown)}
+                    style={{
+                      background: colors.accent,
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "8px 14px",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    📥 Export... <span style={{ fontSize: 10 }}>▼</span>
+                  </button>
+                  {activeExportDropdown && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "100%",
+                        left: 0,
+                        marginBottom: 6,
+                        background: colors.surface,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: 8,
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                        zIndex: 20,
+                        minWidth: 160,
+                        display: "flex",
+                        flexDirection: "column",
+                        padding: 4,
+                      }}
+                    >
+                      <button
+                        onClick={() => { exportJson(); setActiveExportDropdown(false); }}
+                        style={{ background: "transparent", border: "none", color: colors.text, padding: "8px 12px", textAlign: "left", cursor: "pointer", borderRadius: 6, fontSize: 13 }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Export JSON
+                      </button>
+                      <button
+                        onClick={() => { downloadTextFile("clinical-coding-bundle.json", JSON.stringify(bundle, null, 2), "application/fhir+json"); setActiveExportDropdown(false); }}
+                        style={{ background: "transparent", border: "none", color: colors.text, padding: "8px 12px", textAlign: "left", cursor: "pointer", borderRadius: 6, fontSize: 13 }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Export FHIR Bundle
+                      </button>
+                      <button
+                        onClick={() => { exportPdfSummary(); setActiveExportDropdown(false); }}
+                        style={{ background: "transparent", border: "none", color: colors.text, padding: "8px 12px", textAlign: "left", cursor: "pointer", borderRadius: 6, fontSize: 13 }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Export PDF Summary
+                      </button>
+                      <button
+                        onClick={() => { exportCsv(); setActiveExportDropdown(false); }}
+                        style={{ background: "transparent", border: "none", color: colors.text, padding: "8px 12px", textAlign: "left", cursor: "pointer", borderRadius: 6, fontSize: 13 }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Export CSV
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </>
       )}
+
     </div>
   );
 }
 
 function TerminologyCenterPage() {
   const navigate = useNavigate();
-  const colors = THEMES.dark;
+
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem("smartfhirTheme");
+    return saved || "dark";
+  });
+  const colors = THEMES[theme] || THEMES.dark;
+
+  const toggleTheme = () => {
+    const newTheme = theme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    localStorage.setItem("smartfhirTheme", newTheme);
+  };
+
+  function logout() {
+    localStorage.removeItem("smartfhirApiKey");
+    localStorage.removeItem("smartfhirEmail");
+    localStorage.removeItem("smartfhirPlan");
+    localStorage.removeItem("smartfhirUsage");
+    localStorage.removeItem("smartfhirLimit");
+    localStorage.removeItem("smartfhirRemaining");
+    localStorage.removeItem("smartfhirLastUsed");
+    notify("Logged out successfully", "success");
+    navigate("/");
+  }
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -1274,6 +1923,7 @@ function TerminologyCenterPage() {
   const [activeTab, setActiveTab] = useState("search");
   const [validatorInput, setValidatorInput] = useState("");
   const [validatorResult, setValidatorResult] = useState(null);
+  const [isValidating, setIsValidating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState(AI_EXAMPLE_PROMPTS[0]);
   const [aiHasSearched, setAiHasSearched] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -1331,6 +1981,14 @@ function TerminologyCenterPage() {
     );
   }
 
+  // Helper function to get count for a filter
+  const getFilterCount = (filter) => {
+    if (filter === "All") return ALL_RESULTS.length;
+    return ALL_RESULTS.filter((result) => 
+      result.system === filter || result.category === filter
+    ).length;
+  };
+
   // Filter results based on search and filter chip
   const filteredResults = ALL_RESULTS.filter((result) => {
     const matchesSearch =
@@ -1357,25 +2015,35 @@ function TerminologyCenterPage() {
 
   // Validator tab logic
   const validateCode = (code) => {
-    const found = ALL_RESULTS.find(
-      (r) => r.code.toLowerCase() === code.toLowerCase()
-    );
-    if (found) {
-      setValidatorResult({ valid: true, code: found });
-      notify("✓ Valid code found", "success");
-    } else {
-      const similar = ALL_RESULTS.filter(
-        (r) =>
-          r.display.toLowerCase().includes(code.toLowerCase()) ||
-          r.code.includes(code)
-      ).slice(0, 3);
-      setValidatorResult({
-        valid: false,
-        code,
-        suggestions: similar,
-      });
-      notify("✗ Code not found", "error");
+    if (!code.trim()) {
+      notify("Please enter a code to validate", "error");
+      return;
     }
+    setIsValidating(true);
+    setValidatorResult(null);
+
+    setTimeout(() => {
+      const found = ALL_RESULTS.find(
+        (r) => r.code.toLowerCase() === code.trim().toLowerCase()
+      );
+      if (found) {
+        setValidatorResult({ valid: true, code: found });
+        notify("✓ Valid code found", "success");
+      } else {
+        const similar = ALL_RESULTS.filter(
+          (r) =>
+            r.display.toLowerCase().includes(code.toLowerCase()) ||
+            r.code.includes(code)
+        ).slice(0, 3);
+        setValidatorResult({
+          valid: false,
+          code,
+          suggestions: similar,
+        });
+        notify("✗ Code not found", "error");
+      }
+      setIsValidating(false);
+    }, 700);
   };
 
   function runAiFinder() {
@@ -1396,7 +2064,7 @@ function TerminologyCenterPage() {
     );
   }
 
-  const FILTER_CHIPS = [
+  const FILTER_CHIPS_SYSTEMS = [
     "All",
     "SNOMED CT",
     "ICD-10",
@@ -1404,6 +2072,9 @@ function TerminologyCenterPage() {
     "RxNorm",
     "FHIR ValueSet",
     "Code System",
+  ];
+
+  const FILTER_CHIPS_CATEGORIES = [
     "Diagnosis",
     "Medications",
     "Laboratory Tests",
@@ -1418,10 +2089,13 @@ function TerminologyCenterPage() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        height: "100vh",
         background: colors.bg,
         color: colors.text,
         fontFamily: "'Inter', system-ui, sans-serif",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}
     >
       {/* Notifications */}
@@ -1470,54 +2144,79 @@ function TerminologyCenterPage() {
         ))}
       </div>
 
-      <div
+      {/* Static Header */}
+      <header
         style={{
-          maxWidth: 1600,
-          margin: "0 auto",
-          padding: isMobile ? "20px 16px" : "32px 24px",
+          flexShrink: 0,
+          background: colors.surface,
+          borderBottom: `1px solid ${colors.border}`,
+          padding: isMobile ? "20px 16px 0" : "24px 24px 0",
+          boxShadow: `0 4px 12px ${colors.shadow}`,
+          zIndex: 100,
         }}
       >
-        {/* Header */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ maxWidth: 1600, margin: "0 auto" }}>
+          {/* Title Row */}
           <div
             style={{
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 12,
-              marginBottom: 12,
+              gap: 16,
+              marginBottom: 8,
             }}
           >
-            <button
-              onClick={() => navigate(-1)}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: colors.accent,
-                cursor: "pointer",
-                fontSize: 18,
-                padding: "8px",
-              }}
-            >
-              ←
-            </button>
-            <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800 }}>
-              🧬 Terminology Center
-            </h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: colors.text }}>
+                🧬 Terminology Center
+              </h1>
+            </div>
+
+            {/* Actions: Theme Toggle, Back to tools, Logout */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={toggleTheme} aria-label="Toggle Theme" style={{
+                width: 34, height: 34, borderRadius: 10, border: `1px solid ${colors.border}`,
+                display: "grid", placeItems: "center", background: "transparent", color: colors.text,
+                cursor: "pointer", transition: "all 0.2s"
+              }}>
+                {theme === "dark" ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                )}
+              </button>
+              <button onClick={() => navigate("/api-key")} style={{
+                border: `1px solid ${colors.border}`, background: "transparent", color: colors.text,
+                borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+              }} onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                Manage API
+              </button>
+              <button onClick={() => navigate("/tools")} style={{
+                border: `1px solid ${colors.border}`, background: "transparent", color: colors.text,
+                borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+              }} onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                Back to tools
+              </button>
+              <button onClick={logout} style={{
+                border: "1px solid #ef4444", background: "transparent", color: "#ef4444",
+                borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+              }} onMouseEnter={(e) => e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                Logout
+              </button>
+            </div>
           </div>
+
           <p
             style={{
               color: colors.textDim,
               fontSize: 16,
-              margin: 0,
+              margin: "0 0 20px 0",
               maxWidth: 600,
             }}
           >
             Search, validate, map and generate medical terminology codes.
           </p>
-        </div>
 
-        {/* Main Content */}
-        <div style={{ display: "grid", gap: 24 }}>
           {/* Tabs */}
           <div
             style={{
@@ -1557,6 +2256,19 @@ function TerminologyCenterPage() {
               </button>
             ))}
           </div>
+        </div>
+      </header>
+
+      {/* Scrollable Content */}
+      <main
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: isMobile ? "20px 16px 60px" : "32px 24px 60px",
+          background: colors.bg,
+        }}
+      >
+        <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gap: 24 }}>
 
           {/* SEARCH & BROWSE TAB */}
           {activeTab === "search" && (
@@ -1586,24 +2298,70 @@ function TerminologyCenterPage() {
                 }}
               />
 
-              {/* Filter Chips */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  paddingBottom: 8,
-                }}
-              >
-                {FILTER_CHIPS.map((chip) => (
-                  <FilterChip
-                    key={chip}
-                    label={chip}
-                    active={activeFilter === chip}
-                    onClick={() => setActiveFilter(chip)}
-                    colors={colors}
-                  />
-                ))}
+              {/* Filter Chips - Row 1: Terminology Systems */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{
+                  color: colors.muted,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  marginBottom: 8,
+                }}>
+                  Terminology Systems
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {FILTER_CHIPS_SYSTEMS.map((chip) => (
+                    <FilterChip
+                      key={chip}
+                      label={chip}
+                      active={activeFilter === chip}
+                      onClick={() => setActiveFilter(chip)}
+                      colors={colors}
+                      count={getFilterCount(chip)}
+                      variant="system"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Filter Chips - Row 2: Resource/Category Types */}
+              <div>
+                <div style={{
+                  color: colors.muted,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  marginBottom: 8,
+                }}>
+                  Resource / Category Types
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {FILTER_CHIPS_CATEGORIES.map((chip) => (
+                    <FilterChip
+                      key={chip}
+                      label={chip}
+                      active={activeFilter === chip}
+                      onClick={() => setActiveFilter(chip)}
+                      colors={colors}
+                      count={getFilterCount(chip)}
+                      variant="category"
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* Results Grid */}
@@ -1615,9 +2373,9 @@ function TerminologyCenterPage() {
                   gridTemplateColumns: isMobile
                     ? "1fr"
                     : selectedResult && !isMobile
-                      ? "repeat(auto-fill, minmax(320px, 1fr))"
-                      : "repeat(auto-fill, minmax(360px, 1fr))",
-                  gap: 16,
+                      ? "repeat(auto-fill, minmax(340px, 1fr))"
+                      : "repeat(auto-fill, minmax(380px, 1fr))",
+                  gap: 24,
                 }}
               >
                 {filteredResults.length > 0 ? (
@@ -1804,10 +2562,23 @@ function TerminologyCenterPage() {
                 display: isMobile ? "grid" : "grid",
                 gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
                 gap: 24,
+                alignItems: "start",
               }}
             >
-              <div style={{ display: "grid", gap: 16 }}>
-                <div>
+              {/* Left Column: Input Panel */}
+              <div
+                style={{
+                  background: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 12,
+                  padding: 24,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 16,
+                  boxShadow: `0 2px 8px ${colors.shadow}`,
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <label
                     style={{
                       display: "block",
@@ -1816,152 +2587,267 @@ function TerminologyCenterPage() {
                       fontWeight: 700,
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
-                      marginBottom: 8,
                     }}
                   >
                     Enter Code
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., 44054006, E11, 4548-4"
-                    value={validatorInput}
-                    onChange={(e) => setValidatorInput(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "12px 14px",
-                      borderRadius: 10,
-                      border: `1px solid ${colors.border}`,
-                      background: colors.surface,
-                      color: colors.text,
-                      fontSize: 14,
-                      fontFamily: "monospace",
-                      transition: "all 0.2s ease",
-                      boxShadow: `0 2px 8px ${colors.shadow}`,
-                    }}
-                  />
+                  <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+                    <input
+                      type="text"
+                      placeholder="e.g., 44054006, E11, 4548-4"
+                      value={validatorInput}
+                      onChange={(e) => setValidatorInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") validateCode(validatorInput);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: "10px 14px",
+                        borderRadius: 8,
+                        border: `1px solid ${colors.border}`,
+                        background: colors.bg,
+                        color: colors.text,
+                        fontSize: 14,
+                        fontFamily: "monospace",
+                        transition: "all 0.2s ease",
+                        boxShadow: `0 2px 8px ${colors.shadow}`,
+                      }}
+                    />
+                    <button
+                      onClick={() => validateCode(validatorInput)}
+                      disabled={isValidating}
+                      style={{
+                        background: colors.accent,
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 8,
+                        padding: "0 20px",
+                        height: 42,
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        fontSize: 14,
+                        transition: "all 0.2s ease",
+                        boxShadow: `0 4px 12px ${colors.shadowLight}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                      }}
+                    >
+                      {isValidating ? (
+                        <>
+                          <div className="button-spinner" />
+                          <span>Validating...</span>
+                        </>
+                      ) : (
+                        "Validate"
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => validateCode(validatorInput)}
-                  style={{
-                    background: colors.accent,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 10,
-                    padding: "12px 16px",
-                    cursor: "pointer",
-                    fontWeight: 700,
-                    fontSize: 14,
-                    transition: "all 0.2s ease",
-                    boxShadow: `0 4px 12px ${colors.shadowLight}`,
-                  }}
-                >
-                  Validate
-                </button>
               </div>
 
-              {validatorResult && (
-                <div style={{ display: "grid", gap: 16 }}>
-                  {validatorResult.valid ? (
-                    <div
-                      style={{
-                        background: colors.success + "22",
-                        border: `1px solid ${colors.success}44`,
-                        borderRadius: 12,
-                        padding: 20,
-                        display: "grid",
-                        gap: 12,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 24,
-                          fontWeight: 700,
-                          color: colors.success,
-                        }}
-                      >
-                        ✅ Valid
+              {/* Right Column: Result Panel (Empty, Loading, Valid, or Invalid States) */}
+              <div style={{ minHeight: 220 }}>
+                {/* Empty State */}
+                {!validatorResult && !isValidating && (
+                  <div
+                    style={{
+                      border: `2px dashed ${colors.border}`,
+                      borderRadius: 12,
+                      padding: 32,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textAlign: "center",
+                      color: colors.textDim,
+                      minHeight: 220,
+                    }}
+                  >
+                    <span style={{ fontSize: 36, marginBottom: 12 }}>🔍</span>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF", marginBottom: 6 }}>
+                      Validation Diagnostics
+                    </div>
+                    <div style={{ fontSize: 13, maxWidth: 300, lineHeight: 1.5 }}>
+                      Enter a medical code on the left to validate against SNOMED, LOINC, RxNorm, and ICD-10.
+                    </div>
+                  </div>
+                )}
+
+                {/* Loading State */}
+                {isValidating && (
+                  <div
+                    style={{
+                      background: colors.surface,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: 12,
+                      padding: 24,
+                      minHeight: 220,
+                      boxShadow: `0 2px 8px ${colors.shadow}`,
+                    }}
+                  >
+                    <div className="skeleton-card">
+                      <div className="skeleton-title shimmer" />
+                      <div className="skeleton-divider" />
+                      <div className="skeleton-row">
+                        <div className="skeleton-label shimmer" />
+                        <div className="skeleton-value shimmer" />
                       </div>
-                      <div>
-                        <div
-                          style={{
-                            color: colors.textDim,
-                            fontSize: 12,
-                            marginBottom: 4,
-                          }}
-                        >
-                          Code
-                        </div>
-                        <div
-                          style={{
-                            color: colors.accent,
-                            fontFamily: "monospace",
-                            fontSize: 16,
-                            fontWeight: 700,
-                          }}
-                        >
-                          {validatorResult.code.code}
-                        </div>
+                      <div className="skeleton-row">
+                        <div className="skeleton-label shimmer" />
+                        <div className="skeleton-value-long shimmer" />
                       </div>
-                      <div>
-                        <div
-                          style={{
-                            color: colors.textDim,
-                            fontSize: 12,
-                            marginBottom: 4,
-                          }}
-                        >
-                          Display
-                        </div>
-                        <div style={{ color: colors.text, fontSize: 14 }}>
-                          {validatorResult.code.display}
-                        </div>
-                      </div>
-                      <div>
-                        <div
-                          style={{
-                            color: colors.textDim,
-                            fontSize: 12,
-                            marginBottom: 4,
-                          }}
-                        >
-                          System
-                        </div>
-                        <div style={{ color: colors.textDim, fontSize: 13 }}>
-                          {validatorResult.code.system}
-                        </div>
+                      <div className="skeleton-row">
+                        <div className="skeleton-label shimmer" />
+                        <div className="skeleton-value shimmer" />
                       </div>
                     </div>
-                  ) : (
-                    <div
-                      style={{
-                        background: colors.error + "22",
-                        border: `1px solid ${colors.error}44`,
-                        borderRadius: 12,
-                        padding: 20,
-                        display: "grid",
-                        gap: 12,
-                      }}
-                    >
+                  </div>
+                )}
+
+                {/* Valid / Invalid State */}
+                {!isValidating && validatorResult && (
+                  <div style={{ display: "grid", gap: 16 }}>
+                    {validatorResult.valid ? (
                       <div
                         style={{
-                          fontSize: 24,
-                          fontWeight: 700,
-                          color: colors.error,
+                          background: "linear-gradient(180deg, rgba(52, 211, 153, 0.05) 0%, rgba(26, 29, 39, 0) 100%)",
+                          border: `1px solid ${colors.border}`,
+                          borderTop: `4px solid ${colors.success}`,
+                          boxShadow: "0 8px 32px 0 rgba(52, 211, 153, 0.02)",
+                          borderRadius: 12,
+                          padding: 24,
+                          display: "grid",
+                          gap: 20,
                         }}
                       >
-                        ❌ Invalid
-                      </div>
-                      {validatorResult.suggestions &&
-                        validatorResult.suggestions.length > 0 && (
-                          <div>
-                            <div
+                        <div
+                          style={{
+                            fontSize: 18,
+                            fontWeight: 800,
+                            color: colors.success,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          ✔ Valid Code
+                        </div>
+                        <div style={{ height: 1, background: colors.border }} />
+
+                        {/* Two-Column Grid Layout */}
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "90px 1fr",
+                            rowGap: 16,
+                            columnGap: 12,
+                            alignItems: "baseline",
+                          }}
+                        >
+                          <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 13, fontWeight: 700 }}>Code</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span
                               style={{
-                                color: colors.muted,
-                                fontSize: 12,
+                                color: "#FFFFFF",
+                                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                                fontSize: 15,
                                 fontWeight: 700,
-                                marginBottom: 8,
                               }}
                             >
+                              {validatorResult.code.code}
+                            </span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(validatorResult.code.code);
+                                notify("Copied code!", "success");
+                              }}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: colors.muted,
+                                cursor: "pointer",
+                                padding: "2px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                              }}
+                              title="Copy code"
+                            >
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                              </svg>
+                            </button>
+                          </div>
+
+                          <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 13, fontWeight: 700 }}>
+                            Display
+                          </div>
+                          <div style={{ color: "#FFFFFF", fontSize: 14, fontWeight: 700, lineHeight: 1.4 }}>
+                            {validatorResult.code.display}
+                          </div>
+
+                          <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 13, fontWeight: 700 }}>
+                            System
+                          </div>
+                          <div>
+                            <span
+                              style={{
+                                background: colors.accentDim,
+                                color: colors.accent,
+                                padding: "3px 8px",
+                                borderRadius: 6,
+                                fontSize: 11,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {validatorResult.code.system}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          background: "linear-gradient(180deg, rgba(248, 113, 113, 0.05) 0%, rgba(26, 29, 39, 0) 100%)",
+                          border: `1px solid ${colors.border}`,
+                          borderTop: `4px solid ${colors.error}`,
+                          boxShadow: "0 8px 32px 0 rgba(248, 113, 113, 0.02)",
+                          borderRadius: 12,
+                          padding: 24,
+                          display: "grid",
+                          gap: 16,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 18,
+                            fontWeight: 800,
+                            color: colors.error,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          ❌ Invalid Code
+                        </div>
+                        <div style={{ color: "rgba(255, 255, 255, 0.6)", fontSize: 13, lineHeight: 1.5 }}>
+                          The code <code style={{ color: colors.error, fontFamily: "monospace", fontWeight: 700 }}>"{validatorResult.code}"</code> could not be resolved in any dictionary.
+                        </div>
+
+                        {validatorResult.suggestions && validatorResult.suggestions.length > 0 && (
+                          <div style={{ display: "grid", gap: 10 }}>
+                            <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                               Suggested Codes
                             </div>
                             <div style={{ display: "grid", gap: 8 }}>
@@ -1973,32 +2859,27 @@ function TerminologyCenterPage() {
                                     validateCode(sug.code);
                                   }}
                                   style={{
-                                    background: colors.surface,
+                                    background: colors.bg,
                                     border: `1px solid ${colors.border}`,
                                     borderRadius: 8,
-                                    padding: "8px 12px",
+                                    padding: "10px 14px",
                                     color: colors.text,
                                     cursor: "pointer",
                                     textAlign: "left",
                                     fontSize: 13,
                                     transition: "all 0.2s ease",
                                   }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = colors.accent;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = colors.border;
+                                  }}
                                 >
-                                  <div
-                                    style={{
-                                      fontWeight: 700,
-                                      color: colors.accent,
-                                    }}
-                                  >
+                                  <div style={{ fontWeight: 700, color: colors.accent, fontFamily: "monospace" }}>
                                     {sug.code}
                                   </div>
-                                  <div
-                                    style={{
-                                      color: colors.textDim,
-                                      fontSize: 12,
-                                      marginTop: 2,
-                                    }}
-                                  >
+                                  <div style={{ color: colors.textDim, fontSize: 12, marginTop: 4 }}>
                                     {sug.display}
                                   </div>
                                 </button>
@@ -2006,10 +2887,11 @@ function TerminologyCenterPage() {
                             </div>
                           </div>
                         )}
-                    </div>
-                  )}
-                </div>
-              )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -2286,7 +3168,7 @@ function TerminologyCenterPage() {
             </div>
           )}
         </div>
-      </div>
+      </main>
 
       <style>{`
         @keyframes slideIn {
@@ -2299,9 +3181,64 @@ function TerminologyCenterPage() {
             transform: translateX(0);
           }
         }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        .button-spinner {
+          width: 14px;
+          height: 14px;
+          border: 2px solid transparent;
+          border-top-color: #ffffff;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes shimmer-sweep {
+          0% { background-position: -200px 0; }
+          100% { background-position: 200px 0; }
+        }
+        .shimmer {
+          background: linear-gradient(90deg, #1A1D27 25%, #2A2D3E 50%, #1A1D27 75%);
+          background-size: 400px 100%;
+          animation: shimmer-sweep 1.4s infinite linear;
+        }
+        .skeleton-card {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .skeleton-title {
+          height: 24px;
+          width: 120px;
+          border-radius: 4px;
+        }
+        .skeleton-divider {
+          height: 1px;
+          background: #2A2D3E;
+          width: 100%;
+        }
+        .skeleton-row {
+          display: grid;
+          grid-template-columns: 90px 1fr;
+          gap: 12px;
+          align-items: center;
+        }
+        .skeleton-label {
+          height: 16px;
+          width: 60px;
+          border-radius: 4px;
+        }
+        .skeleton-value {
+          height: 16px;
+          width: 100px;
+          border-radius: 4px;
+        }
+        .skeleton-value-long {
+          height: 16px;
+          width: 180px;
+          border-radius: 4px;
+        }
       `}</style>
     </div>
   );
 }
-
 export default TerminologyCenterPage;

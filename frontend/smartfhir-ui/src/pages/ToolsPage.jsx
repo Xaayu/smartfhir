@@ -166,13 +166,21 @@ const tools = [
     icon: "🧾",
     desc: "A toolkit for working with Patient, Observation, Condition, Encounter, MedicationRequest and more.",
     tags: ["FHIR", "Resources", "Validation"],
+    path: "/tools/fhir",
   },
   {
     title: "HL7 Suite",
-    icon: "🔄",
+    icon: "📋",
     desc: "Convert between HL7 and FHIR, parse messages, validate structure, and inspect segments and fields.",
     tags: ["HL7", "FHIR", "Interoperability"],
     path: "/tools/hl7-suite",
+  },
+  {
+    title: "Terminology Center",
+    icon: "🏥",
+    desc: "Search and browse medical terminology including SNOMED CT, ICD-10, LOINC, RxNorm, and FHIR ValueSets.",
+    tags: ["Terminology", "SNOMED", "LOINC", "RxNorm"],
+    path: "/tools/terminology",
   },
   {
     title: "Radiology Tools",
@@ -183,7 +191,7 @@ const tools = [
   {
     title: "More tools coming",
     icon: "🚀",
-    desc: "Lab, pharmacy, claims, terminology, mapping, and other healthcare data utilities can be added here.",
+    desc: "Lab, pharmacy, claims, mapping, and other healthcare data utilities can be added here.",
     tags: ["Roadmap", "Healthcare", "Future"],
   },
 ];
@@ -200,7 +208,10 @@ export default function ToolsPage() {
             <div className="tools-brand-icon">M</div>
             <span>MedTechTools</span>
           </div>
-          <button className="btn-secondary" onClick={() => navigate('/docs')}>View docs</button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn-secondary" onClick={() => navigate('/api-key')}>Manage API</button>
+            <button className="btn-secondary" onClick={() => navigate('/docs')}>View docs</button>
+          </div>
         </nav>
 
         <section className="tools-hero">

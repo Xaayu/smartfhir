@@ -815,7 +815,7 @@ function FeedbackWidget() {
         {!isSubmitted ? (
           <>
             <div className="fb-header">
-              <div className="fb-title">Help shape SmartFHIR</div>
+              <div className="fb-title">Help shape MedTechTools</div>
               <button
                 className="fb-close"
                 type="button"
@@ -828,7 +828,7 @@ function FeedbackWidget() {
 
             <div className="fb-body">
               <label className="fb-q-label" htmlFor="fbText">
-                What would make SmartFHIR useful<br />for your workflow?
+                What would make MedTechTools useful<br />for your workflow?
               </label>
               <textarea
                 className={`fb-textarea${showInvalid ? ' invalid' : ''}`}
@@ -912,6 +912,22 @@ export default function LandingPage() {
   const goToDocs = () => navigate('/docs');
   const goToTools = () => navigate('/tools');
 
+  // Tool-specific dashboards. Selecting an available tool should collect an
+  // API key first (if the visitor doesn't have one yet), then land on that
+  // tool's own dashboard - never the old shared multi-suite dashboard.
+  const TOOL_DASHBOARDS = {
+    fhir: '/tools/fhir',
+    hl7: '/tools/hl7-suite',
+    terminology: '/tools/terminology',
+  };
+
+  const selectTool = (toolId) => {
+    const hasApiKey = Boolean(localStorage.getItem('smartfhirApiKey'));
+    const destination = TOOL_DASHBOARDS[toolId];
+    if (!destination) return;
+    navigate(hasApiKey ? destination : `/api-key?tool=${toolId}`);
+  };
+
   return (
     <>
       <style>{styles}</style>
@@ -942,11 +958,11 @@ export default function LandingPage() {
             Now in public beta
           </div>
           <h1 className="hero-title fade-up fade-up-2">
-            Fix FHIR data<br />
-            <span className="hero-title-accent">before it breaks your workflow.</span>
+            Developers Platform for<br />
+            <span className="hero-title-accent">Healthcare Interoperability.</span>
           </h1>
           <p className="hero-sub fade-up fade-up-3">
-            MedTechTools helps healthcare developers, integrators, and data teams validate, explain, and correct FHIR resources faster with one API call.
+            MedTechTools provides powerful tools for healthcare developers to validate, transform, and integrate healthcare data across FHIR, HL7, clinical documents, radiology, laboratory, pharmacy, and more.
           </p>
           <div className="hero-actions fade-up fade-up-4">
             <button className="btn-primary" onClick={goToApiKey}>
@@ -957,7 +973,7 @@ export default function LandingPage() {
           
           <div className="hero-highlights fade-up fade-up-4">
             <div className="hero-highlight"><span>⚡</span><span><strong>Fast setup</strong> in under 2 minutes</span></div>
-            <div className="hero-highlight"><span>🩺</span><span><strong>Built for</strong> healthcare data workflows</span></div>
+            <div className="hero-highlight"><span>🩺</span><span><strong>Built for</strong> FHIR, HL7, DICOM, CDA workflows</span></div>
             <div className="hero-highlight"><span>✅</span><span><strong>Free tier</strong> with 500 calls/month</span></div>
           </div>
           
@@ -970,7 +986,7 @@ export default function LandingPage() {
 
       {/* STATS */}
       <div className="stats-bar">
-        {[['5','FHIR resource types'],['118','Tests passing'],['3','Medical code systems'],['<200ms','Avg response time']].map(([val,label]) => (
+        {[['3','Active Tools'],['7','Coming Soon'],['3','Data Standards'],['<200ms','Avg response time']].map(([val,label]) => (
           <div className="stat-item" key={label}>
             <div className="stat-val">{val}</div>
             <div className="stat-label">{label}</div>
@@ -978,16 +994,69 @@ export default function LandingPage() {
         ))}
       </div>
 
+      {/* TOOLS GALLERY */}
+      <div className="section">
+        <div className="section-eyebrow">Tools Gallery</div>
+        <h2 className="section-title">One platform. Every healthcare standard.</h2>
+        <p className="section-sub">Access specialized tools for different healthcare data standards from a single unified dashboard.</p>
+        
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 16,
+          marginTop: 32
+        }}>
+          {[
+            { icon: '🏥', name: 'FHIR Tools', standard: 'FHIR R4', desc: 'Validate, explain, and auto-fix FHIR resources with intelligent field mapping and quality scoring.', status: 'Available', statusColor: 'var(--teal)', toolId: 'fhir' },
+            { icon: '📨', name: 'HL7 Suite', standard: 'HL7 v2', desc: 'Parse, validate, and convert HL7 v2 messages with detailed segment and field analysis.', status: 'Available', statusColor: 'var(--teal)', toolId: 'hl7' },
+            { icon: '🔬', name: 'Terminology Suite', standard: 'LOINC/SNOMED/RxNorm', desc: 'Lookup medical codes across multiple standard code systems with live API fallback.', status: 'Available', statusColor: 'var(--teal)', toolId: 'terminology' },
+            { icon: '📄', name: 'Clinical Documents', standard: 'CCD/CDA', desc: 'Generate, validate, and transform clinical documents including CCD, CDA, and care summaries.', status: 'Coming Soon', statusColor: 'var(--dim)' },
+            { icon: '🔍', name: 'Radiology Tools', standard: 'DICOM', desc: 'Work with DICOM imaging data, radiology reports, and imaging study metadata.', status: 'Coming Soon', statusColor: 'var(--dim)' },
+            { icon: '🧪', name: 'Laboratory Suite', standard: 'LOINC/LAB', desc: 'Process lab orders, results, and reference ranges with comprehensive laboratory data management.', status: 'Coming Soon', statusColor: 'var(--dim)' },
+            { icon: '💊', name: 'Pharmacy Tools', standard: 'RxNorm/NDC', desc: 'Manage prescriptions, medication interactions, and pharmacy dispensing workflows.', status: 'Coming Soon', statusColor: 'var(--dim)' },
+          ].map((tool, i) => (
+            <div key={tool.name} style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              padding: 24,
+              cursor: tool.status === 'Available' ? 'pointer' : 'default',
+              transition: 'all 0.2s',
+              opacity: tool.status === 'Coming Soon' ? 0.6 : 1,
+            }} onClick={tool.status === 'Available' && tool.toolId ? () => selectTool(tool.toolId) : undefined}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ fontSize: 32 }}>{tool.icon}</div>
+                <div style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  color: tool.statusColor,
+                  padding: '4px 10px',
+                  borderRadius: '100px',
+                  background: tool.status === 'Available' ? 'rgba(0,212,170,0.1)' : 'rgba(148,163,184,0.1)'
+                }}>{tool.status}</div>
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{tool.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--accent)', marginBottom: 12 }}>{tool.standard}</div>
+              <div style={{ fontSize: 14, color: 'var(--dim)', lineHeight: 1.6 }}>{tool.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="full-divider" />
+
       {/* BENEFITS */}
       <div className="section">
         <div className="section-eyebrow">Why teams use it</div>
-        <h2 className="section-title">Less manual cleanup. More reliable FHIR output.</h2>
-        <p className="section-sub">Designed for developers who want trustworthy healthcare data without spending hours debugging schema issues.</p>
+        <h2 className="section-title">Less manual cleanup. More reliable healthcare data.</h2>
+        <p className="section-sub">Designed for developers who want trustworthy healthcare data without spending hours debugging schema issues across multiple standards.</p>
         <div className="benefit-grid">
           <div className="benefit-card">
             <div className="benefit-icon">🧠</div>
             <div className="benefit-title">Understand every issue</div>
-            <div className="benefit-desc">Get plain-English explanations for invalid values, bad formats, and missing terminology.</div>
+            <div className="benefit-desc">Get plain-English explanations for invalid values, bad formats, and missing terminology across FHIR, HL7, and clinical documents.</div>
           </div>
           <div className="benefit-card">
             <div className="benefit-icon">⚙️</div>
@@ -996,9 +1065,83 @@ export default function LandingPage() {
           </div>
           <div className="benefit-card">
             <div className="benefit-icon">📦</div>
-            <div className="benefit-title">Ship complete patient bundles</div>
-            <div className="benefit-desc">Generate patient-centered FHIR bundles in one request instead of stitching everything together manually.</div>
+            <div className="benefit-title">Multi-standard support</div>
+            <div className="benefit-desc">Work with FHIR, HL7 v2, clinical documents, radiology, laboratory, pharmacy and more from one unified platform.</div>
           </div>
+        </div>
+      </div>
+
+      <div className="full-divider" />
+
+      {/* CROSS-STANDARD MAPPING */}
+      <div className="section">
+        <div className="section-eyebrow">Cross-Standard Mapping</div>
+        <h2 className="section-title">Translate between healthcare standards.</h2>
+        <p className="section-sub">Seamlessly convert data between different healthcare interoperability standards with intelligent mapping and validation.</p>
+        
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: 16,
+          marginTop: 32
+        }}>
+          {[
+            { 
+              from: 'HL7 v2', 
+              to: 'FHIR R4', 
+              icon: '📨➡️🏥',
+              desc: 'Convert HL7 v2 pipe-delimited messages (ADT^A01, ORM^O01) to structured FHIR resources (Patient, Encounter, ServiceRequest).'
+            },
+            { 
+              from: 'CDA', 
+              to: 'FHIR Bundles', 
+              icon: '📄➡️📦',
+              desc: 'Extract clinical data from CCD/CDA documents and transform into FHIR Bundles with Composition, Patient, and Observation resources.'
+            },
+            { 
+              from: 'DICOM', 
+              to: 'FHIR ImagingStudy', 
+              icon: '🔍➡️🏥',
+              desc: 'Parse DICOM metadata and create FHIR ImagingStudy resources with referenced Series and Instance components.'
+            },
+          ].map((mapping, i) => (
+            <div key={i} style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              padding: 24,
+            }}>
+              <div style={{ fontSize: 28, marginBottom: 16, textAlign: 'center' }}>{mapping.icon}</div>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: 12,
+                marginBottom: 12 
+              }}>
+                <span style={{ 
+                  fontSize: 14, 
+                  fontWeight: 600, 
+                  color: 'var(--accent)',
+                  background: 'rgba(79,142,247,0.1)',
+                  padding: '6px 12px',
+                  borderRadius: '8px'
+                }}>{mapping.from}</span>
+                <span style={{ fontSize: 18, color: 'var(--dim)' }}>➡️</span>
+                <span style={{ 
+                  fontSize: 14, 
+                  fontWeight: 600, 
+                  color: 'var(--teal)',
+                  background: 'rgba(0,212,170,0.1)',
+                  padding: '6px 12px',
+                  borderRadius: '8px'
+                }}>{mapping.to}</span>
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--dim)', lineHeight: 1.6, textAlign: 'center' }}>
+                {mapping.desc}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -1007,8 +1150,8 @@ export default function LandingPage() {
       {/* HOW IT WORKS */}
       <div className="section" id="how">
         <div className="section-eyebrow">How it works</div>
-        <h2 className="section-title">One API call. Cleaner FHIR data.</h2>
-        <p className="section-sub">Send your raw healthcare data and get back a valid, explained, and corrected FHIR resource without manual cleanup.</p>
+        <h2 className="section-title">One platform. Multiple healthcare standards.</h2>
+        <p className="section-sub">Send your raw healthcare data and get back validated, explained, and corrected resources across FHIR, HL7, and more without manual cleanup.</p>
         <div className="how-grid">
           <div className="how-step" ref={addRef(0)}>
             <div className="how-step-num">Step 01</div>
@@ -1093,10 +1236,10 @@ export default function LandingPage() {
         <h2 className="section-title">Everything you need.<br />Nothing you don't.</h2>
         <div className="features-grid">
           {[
-            { icon:'🗺️', bg:'rgba(79,142,247,0.1)',  title:'Smart Field Mapping',     desc:'Built-in rules for 50+ common field aliases. Save your own mappings — they apply on every future call automatically.',                                tag:'Patient · Observation · Condition · Encounter · Medication' },
+            { icon:'🗺️', bg:'rgba(79,142,247,0.1)',  title:'Smart Field Mapping',     desc:'Built-in rules for 50+ common field aliases across multiple standards. Save your own mappings — they apply on every future call automatically.',                                tag:'FHIR · HL7 · Clinical Docs' },
             { icon:'🔬', bg:'rgba(0,212,170,0.1)',   title:'Medical Code Lookup',      desc:'Automatic LOINC codes for lab tests, SNOMED CT for diagnoses, RxNorm for medications. Built-in common codes plus live API fallback.',            tag:'LOINC · SNOMED CT · RxNorm' },
             { icon:'💡', bg:'rgba(251,191,36,0.1)',  title:'Human-Readable Errors',    desc:'No more cryptic schema messages. Every error explained in plain English with the exact fix required. AI-powered for complex cases.',               tag:'Rule-based + Gemini AI hybrid' },
-            { icon:'⚡', bg:'rgba(248,113,113,0.1)', title:'Auto-Fix Engine',          desc:'Gender values, date formats, status codes, enum values — fixed automatically. One API call returns a clean, valid FHIR resource.',                 tag:'M→male · 15/04/1990→1990-04-15 · ongoing→active' },
+            { icon:'⚡', bg:'rgba(248,113,113,0.1)', title:'Auto-Fix Engine',          desc:'Gender values, date formats, status codes, enum values — fixed automatically. One API call returns a clean, valid resource.',                 tag:'M→male · 15/04/1990→1990-04-15 · ongoing→active' },
             { icon:'🏥', bg:'rgba(192,132,252,0.1)', title:'Business Rule Validation', desc:'Clinical logic checks beyond schema validation. Impossible dates, unrealistic ages, medication conflicts, date ordering errors.',                   tag:'Age · Dates · Dosage · Clinical conflicts' },
             { icon:'📊', bg:'rgba(79,142,247,0.1)',  title:'Quality Scoring',          desc:'Every resource gets a quality grade from A+ to D. Schema score, terminology score, business rules score — all in one response.',                   tag:'A+ · A · B · C · D grades' },
           ].map((f, i) => (
@@ -1188,26 +1331,39 @@ export default function LandingPage() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <button className="btn-primary" onClick={goToApiKey}>
+          <button className="btn-primary" onClick={() => selectTool('fhir')}>
             Try bundle generation <span>→</span>
           </button>
         </div>
       </div>
 
-      <div className="full-divider" />
 
-      {/* RESOURCES */}
+      {/* COMING SOON */}
       <div className="section">
-        <div className="section-eyebrow">Supported Resources</div>
-        <h2 className="section-title">Covers the resources<br />that matter most.</h2>
-        <p className="section-sub">Handles the 5 FHIR resource types that make up 80% of real healthcare data exchange.</p>
-        <div className="resources-row">
-          {['Patient','Observation','Condition','Encounter','MedicationRequest'].map(r => (
-            <div key={r} className="resource-chip active">{r}</div>
-          ))}
-          {['AllergyIntolerance →','Procedure →','DiagnosticReport →','Immunization →'].map(r => (
-            <div key={r} className="resource-chip">{r}</div>
-          ))}
+        <div className="section-eyebrow">Coming Soon</div>
+        <h2 className="section-title">More tools on the roadmap.</h2>
+        <p className="section-sub">We're expanding beyond FHIR and HL7 to cover the full spectrum of healthcare data interoperability.</p>
+        <div className="benefit-grid">
+          <div className="benefit-card">
+            <div className="benefit-icon">📄</div>
+            <div className="benefit-title">Clinical Documents</div>
+            <div className="benefit-desc">Generate, validate, and transform clinical documents including CCD, CDA, and structured care summaries.</div>
+          </div>
+          <div className="benefit-card">
+            <div className="benefit-icon">🔍</div>
+            <div className="benefit-title">Radiology Tools</div>
+            <div className="benefit-desc">Work with DICOM imaging data, radiology reports, and imaging study metadata.</div>
+          </div>
+          <div className="benefit-card">
+            <div className="benefit-icon">🧪</div>
+            <div className="benefit-title">Laboratory Suite</div>
+            <div className="benefit-desc">Process lab orders, results, and reference ranges with comprehensive laboratory data management.</div>
+          </div>
+          <div className="benefit-card">
+            <div className="benefit-icon">💊</div>
+            <div className="benefit-title">Pharmacy Tools</div>
+            <div className="benefit-desc">Manage prescriptions, medication interactions, and pharmacy dispensing workflows.</div>
+          </div>
         </div>
       </div>
 
@@ -1259,7 +1415,7 @@ export default function LandingPage() {
 
       {/* CTA */}
       <div className="cta-section">
-        <h2 className="cta-title">Stop debugging FHIR.<br />Start shipping.</h2>
+        <h2 className="cta-title">Stop debugging healthcare data.<br />Start shipping.</h2>
         <p className="cta-sub">Get your free API key in 30 seconds. 500 calls/month, no credit card required.</p>
         <div style={{ display: 'flex', gap: '12px', maxWidth: '480px', margin: '32px auto 0', justifyContent: 'center' }}>
           <button className="btn-primary" onClick={goToApiKey}>Get free API key</button>
