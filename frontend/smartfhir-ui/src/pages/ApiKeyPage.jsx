@@ -27,11 +27,6 @@ function getApiHeaders() {
   };
 }
 
-const TOOL_DESTINATIONS = {
-  fhir: "/tools/fhir",
-  hl7: "/tools/hl7-suite",
-  terminology: "/tools/terminology",
-};
 const TOOL_LABELS = {
   fhir: "FHIR Resources",
   hl7: "HL7 Suite",
