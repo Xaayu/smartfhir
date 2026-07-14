@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE } from "../config";
 
@@ -169,8 +169,6 @@ function KeyManagerDashboard({ colors, theme, toggleTheme, onLogout, navigate })
     }
   }, [apiKey]);
 
-  useEffect(() => { fetchUsage(); }, [fetchUsage]);
-
   function copyKey() {
     navigator.clipboard.writeText(apiKey).then(() => {
       setCopied(true);
@@ -198,15 +196,15 @@ function KeyManagerDashboard({ colors, theme, toggleTheme, onLogout, navigate })
         <HeaderButtons colors={colors} theme={theme} toggleTheme={toggleTheme} onNavigate={navigate} onLogout={onLogout} showLogout={true} />
       </header>
 
-      <main style={{ maxWidth: 860, margin: "0 auto", padding: "32px 24px 64px" }}>
+      <main style={{ maxWidth: 860, margin: "0 auto", padding: "32px 16px 64px" }}>
         {/* Account card */}
         <div style={{
           background: colors.surface, border: `1px solid ${colors.border}`,
-          borderRadius: 16, padding: 24, marginBottom: 20,
+          borderRadius: 16, padding: 20, marginBottom: 20,
           boxShadow: `0 2px 12px ${colors.shadow}`,
         }}>
           <div style={{ color: colors.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>Account</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16, flexWrap: "wrap" }}>
             <div style={{
               width: 48, height: 48, borderRadius: 12,
               background: "linear-gradient(135deg, #4F8EF7, #00D4AA)",
@@ -271,7 +269,7 @@ function KeyManagerDashboard({ colors, theme, toggleTheme, onLogout, navigate })
         {/* Usage card */}
         <div style={{
           background: colors.surface, border: `1px solid ${colors.border}`,
-          borderRadius: 16, padding: 24, marginBottom: 20,
+          borderRadius: 16, padding: 20, marginBottom: 20,
           boxShadow: `0 2px 12px ${colors.shadow}`,
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -294,7 +292,7 @@ function KeyManagerDashboard({ colors, theme, toggleTheme, onLogout, navigate })
 
           {usage ? (
             <>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
                 <StatCard label="Calls Used" value={usage.calls_used ?? 0} color={colors.text} colors={colors} />
                 <StatCard label="Remaining" value={usage.calls_remaining ?? 0} color={colors.success} colors={colors} />
                 <StatCard label="Monthly Limit" value={usage.calls_limit ?? 500} color={colors.accent} colors={colors} />
@@ -317,11 +315,11 @@ function KeyManagerDashboard({ colors, theme, toggleTheme, onLogout, navigate })
         {/* Quick links */}
         <div style={{
           background: colors.surface, border: `1px solid ${colors.border}`,
-          borderRadius: 16, padding: 24,
+          borderRadius: 16, padding: 20,
           boxShadow: `0 2px 12px ${colors.shadow}`,
         }}>
           <div style={{ color: colors.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>Quick Access</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
             {[
               { label: "FHIR Resources", icon: "⚡", path: "/tools/fhir" },
               { label: "HL7 Suite", icon: "🔀", path: "/tools/hl7-suite" },
@@ -386,11 +384,26 @@ function RegistrationForm({ colors, theme, toggleTheme, navigate, toolLabel, onS
 
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, color: colors.text, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .registration-body {
+            grid-template-columns: 1fr !important;
+            gap: 32px !important;
+            padding: 32px 16px !important;
+          }
+          .benefits-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .form-card {
+            padding: 24px !important;
+          }
+        }
+      `}</style>
       {/* Header */}
       <header style={{
         position: "sticky", top: 0, zIndex: 100,
         background: colors.surface, borderBottom: `1px solid ${colors.border}`,
-        padding: "14px 24px", display: "flex", alignItems: "center",
+        padding: "14px 16px", display: "flex", alignItems: "center",
         justifyContent: "space-between", gap: 12,
         boxShadow: `0 2px 8px ${colors.shadow}`,
       }}>
@@ -409,25 +422,25 @@ function RegistrationForm({ colors, theme, toggleTheme, navigate, toolLabel, onS
       </header>
 
       {/* Body */}
-      <div style={{
+      <div className="registration-body" style={{
         display: "grid",
         gridTemplateColumns: "minmax(0, 1.1fr) minmax(300px, 0.9fr)",
-        gap: 48, padding: "48px 56px",
+        gap: 48, padding: "48px 16px",
         maxWidth: 1200, margin: "0 auto",
       }}>
         <section>
           <div style={{ color: colors.accent, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Developer preview</div>
           <h1 style={{
             fontFamily: "'Space Grotesk', 'Inter', sans-serif",
-            fontSize: "clamp(32px, 4vw, 56px)", lineHeight: 1.05,
+            fontSize: "clamp(28px, 5vw, 56px)", lineHeight: 1.05,
             letterSpacing: "-0.03em", margin: "0 0 18px",
           }}>
             {toolLabel ? `Get your key to unlock ${toolLabel}.` : "Get a MedTechTools API key in one step."}
           </h1>
-          <p style={{ color: colors.textDim, fontSize: 16, lineHeight: 1.7, maxWidth: 540, marginBottom: 36 }}>
+          <p style={{ color: colors.textDim, fontSize: 15, lineHeight: 1.7, maxWidth: 540, marginBottom: 32 }}>
             V1 is intentionally small: one email, one key, and a dashboard for testing validation, mapping, and auto-fix workflows.
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, maxWidth: 640 }}>
+          <div className="benefits-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, maxWidth: 640 }}>
             {benefits.map(([title, desc]) => (
               <div key={title} style={{
                 border: `1px solid ${colors.border}`, background: colors.surface,
@@ -452,12 +465,12 @@ function RegistrationForm({ colors, theme, toggleTheme, navigate, toolLabel, onS
         </section>
 
         <section style={{ alignSelf: "center" }}>
-          <div style={{
+          <div className="form-card" style={{
             border: `1px solid ${colors.border}`, background: colors.surface,
-            borderRadius: 16, padding: 32, boxShadow: `0 20px 60px ${colors.shadow}`,
+            borderRadius: 16, padding: 28, boxShadow: `0 20px 60px ${colors.shadow}`,
           }}>
-            <h2 style={{ fontWeight: 800, fontSize: 22, marginBottom: 6 }}>Create your free key</h2>
-            <p style={{ color: colors.textDim, fontSize: 14, marginBottom: 24 }}>No password. No trial setup. No credit card.</p>
+            <h2 style={{ fontWeight: 800, fontSize: 20, marginBottom: 6 }}>Create your free key</h2>
+            <p style={{ color: colors.textDim, fontSize: 13, marginBottom: 20 }}>No password. No trial setup. No credit card.</p>
 
             <form onSubmit={handleSubmit}>
               <label style={{
@@ -471,7 +484,7 @@ function RegistrationForm({ colors, theme, toggleTheme, navigate, toolLabel, onS
                 autoComplete="email"
                 style={{
                   width: "100%", background: colors.bg, border: `1px solid ${colors.border}`,
-                  color: colors.text, borderRadius: 10, padding: "13px 14px",
+                  color: colors.text, borderRadius: 10, padding: "12px 14px",
                   fontSize: 15, outline: "none", marginBottom: 14,
                   transition: "border-color 0.2s", boxSizing: "border-box",
                 }}

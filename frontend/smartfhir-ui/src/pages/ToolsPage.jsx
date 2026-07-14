@@ -93,7 +93,7 @@ const styles = `
 
   .tools-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 16px;
   }
 
@@ -101,7 +101,7 @@ const styles = `
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 24px;
+    padding: 20px;
     transition: border-color 0.2s, transform 0.2s;
   }
 
@@ -183,16 +183,25 @@ const tools = [
     path: "/tools/terminology",
   },
   {
+    title: "API Documentation",
+    icon: "🔌",
+    desc: "Interactive API examples with code generation in cURL, Python, JavaScript, and Node.js.",
+    tags: ["API", "Documentation", "Code"],
+    path: "/tools/api",
+  },
+  {
     title: "Radiology Tools",
     icon: "🩻",
     desc: "Support for imaging studies, report mapping, and clinical data handling in radiology workflows.",
     tags: ["Radiology", "Imaging", "Reports"],
+    path: null,
   },
   {
     title: "More tools coming",
     icon: "🚀",
     desc: "Lab, pharmacy, claims, mapping, and other healthcare data utilities can be added here.",
     tags: ["Roadmap", "Healthcare", "Future"],
+    path: null,
   },
 ];
 

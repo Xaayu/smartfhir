@@ -27,7 +27,12 @@ const styles = `
   .suite-shell {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 32px 24px 80px;
+    padding: 32px 16px 80px;
+  }
+
+  @media (max-width: 700px) {
+    .suite-shell { padding: 20px 16px 60px; }
+    .suite-nav { flex-direction: column; align-items: flex-start; gap: 12px; }
   }
 
   .suite-nav {

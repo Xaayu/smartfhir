@@ -26,9 +26,17 @@ const styles = `
     --teal: #059669;
   }
   .hl7-page { min-height: 100vh; background: var(--bg); color: var(--text); font-family: Inter, Arial, sans-serif; transition: background 0.3s, color 0.3s; }
-  .hl7-shell { max-width: 1600px; margin: 0 auto; padding: 22px 20px 64px; }
+  .hl7-shell { width: 100%; max-width: 100vw; margin: 0 auto; padding: 22px 16px 64px; }
 
-  .hl7-topbar { position: sticky; top: 0; z-index: 100; background: var(--bg); display: flex; justify-content: space-between; align-items: center; padding: 22px 0 18px 0; margin: -22px 0 20px 0; border-bottom: 1px solid var(--border); transition: background 0.3s; }
+  @media (max-width: 700px) {
+    .hl7-shell { padding: 20px 12px 60px; }
+    .hl7-topbar { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .hl7-topbar-right { flex-wrap: wrap; }
+    .hl7-tabs { padding-bottom: 0; }
+    .hl7-tab { padding: 10px 16px; font-size: 14px; }
+  }
+
+  .hl7-topbar { position: sticky; top: 0; z-index: 100; background: var(--bg); display: flex; justify-content: space-between; align-items: center; padding: 22px 0 18px 0; margin: 0 0 20px 0; border-bottom: 1px solid var(--border); transition: background 0.3s; }
   .hl7-topbar-title { font-size: 18px; font-weight: 800; margin: 0 0 4px; }
   .hl7-topbar-sub { color: var(--muted); font-size: 13px; margin: 0; }
   .hl7-topbar-right { display: flex; align-items: center; gap: 10px; }
@@ -40,8 +48,9 @@ const styles = `
   .hl7-icon-btn:hover { background: var(--surface-2); }
 
   /* Redesigned classic tab deck */
-  .hl7-tabs { display: flex; gap: 0; flex-wrap: wrap; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
-  .hl7-tab { background: transparent; color: var(--muted); border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 12px 24px; font-weight: 700; font-size: 15px; cursor: pointer; white-space: nowrap; margin-bottom: -2px; transition: all 0.2s; }
+  .hl7-tabs { display: flex; gap: 0; overflow-x: auto; white-space: nowrap; border-bottom: 2px solid var(--border); margin-bottom: 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .hl7-tabs::-webkit-scrollbar { display: none; }
+  .hl7-tab { background: transparent; color: var(--muted); border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 12px 24px; min-height: 44px; font-weight: 700; font-size: 15px; cursor: pointer; white-space: nowrap; margin-bottom: -2px; transition: all 0.2s; }
   .hl7-tab:hover { color: var(--text); }
   .hl7-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
@@ -54,10 +63,10 @@ const styles = `
   .hl7-toggle-btn { background: transparent; color: var(--muted); border: none; border-radius: 40px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
   .hl7-toggle-btn.active { background: linear-gradient(135deg, var(--accent), var(--teal)); color: #06111c; box-shadow: 0 2px 10px rgba(38,201,160,0.2); }
 
-  .hl7-workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: stretch; }
-  @media (max-width: 860px) { .hl7-workspace { grid-template-columns: 1fr; } }
+  .hl7-workspace { display: flex; flex-direction: column; gap: 18px; align-items: stretch; }
+  @media (min-width: 861px) { .hl7-workspace { flex-direction: row; } }
 
-  .hl7-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 20px; display: flex; flex-direction: column; }
+  .hl7-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 20px; display: flex; flex-direction: column; width: 100%; }
   .hl7-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
   .hl7-label { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; }
 
@@ -71,7 +80,7 @@ const styles = `
   .hl7-run-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
 
   .hl7-output-empty { color: var(--muted); font-size: 14px; line-height: 1.6; height: 400px; display: flex; align-items: center; justify-content: center; text-align: center; }
-  .hl7-output { height: 400px; padding: 14px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 13px; color: var(--text); overflow-y: auto; flex-grow: 1; }
+  .hl7-output { max-height: 400px; padding: 14px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); white-space: pre-wrap; word-break: break-all; font-family: ui-monospace, monospace; font-size: 12px; color: var(--text); overflow-y: auto; flex-grow: 1; }
 
   /* Toast Notifications */
   .toast-container {
@@ -173,10 +182,6 @@ function HL7SuitePage() {
     };
   };
 
-  useEffect(() => {
-    document.title = "HL7 Suite: Parse & Convert HL7 to FHIR | MedTechTools";
-  }, []);
-
   const [theme, setTheme] = useState("dark");
   const [activeTab, setActiveTab] = useState("convert");
   const [convertDirection, setConvertDirection] = useState("hl7-to-fhir");
@@ -196,6 +201,19 @@ function HL7SuitePage() {
 
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
+
+  useEffect(() => {
+    document.title = "HL7 Suite: Parse & Convert HL7 to FHIR | MedTechTools";
+  }, []);
+
+  // Clear results when switching tabs to prevent carryover
+  useEffect(() => {
+    setHl7ToFhirResult("");
+    setFhirToHl7Result("");
+    setParserResult("");
+    setValidatorResult("");
+    setExplorerResult("");
+  }, [activeTab, convertDirection]);
 
   const addToast = (message, type = "info", id = Date.now()) => {
     setToasts((prev) => {
@@ -464,8 +482,8 @@ function HL7SuitePage() {
        if (view.result === "Running...") return <div className="hl7-output">Running...</div>;
        if (view.result && view.result.startsWith("Error")) return <div className="hl7-output">{view.result}</div>;
        
-       // Show Segment Breakdown
-       if (view.result || hl7Input) {
+       // Show Segment Breakdown only when result exists
+       if (view.result) {
          const hl7ToParse = hl7Input || defaultHl7;
          const segments = hl7ToParse.split(/[\r\n]+/).filter(Boolean);
          return (

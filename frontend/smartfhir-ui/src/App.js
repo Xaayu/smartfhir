@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import TerminologyCenterPage from "./pages/TerminologyCenterPage";
 import FhirResourcesPage from "./pages/Fhirresourcespage";
 import HL7SuitePage from "./pages/hl7suitpage";
+import ApiPage from "./pages/ApiPage";
 
 function HomeRoute() {
   const hasApiKey = Boolean(localStorage.getItem("smartfhirApiKey"));
@@ -55,6 +56,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <TerminologyCenterPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tools/api"
+        element={
+          <ProtectedRoute>
+            <ApiPage />
           </ProtectedRoute>
         }
       />
