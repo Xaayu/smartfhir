@@ -1,0 +1,623 @@
+{
+  "original_strict": {
+    "resourceType": "Patient",
+    "id": "PT-1942-002",
+    "name": [
+      {
+        "family": "Chen",
+        "given": [
+          "Eleanor",
+          "May"
+        ],
+        "prefix": [
+          "Mrs."
+        ]
+      }
+    ],
+    "birthDate": "1942-11-23",
+    "gender": "female",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-555-0199"
+      },
+      {
+        "system": "email",
+        "value": "eleanor.chen@hospital.org"
+      }
+    ],
+    "address": [
+      {
+        "line": [
+          "456 Oak Avenue"
+        ],
+        "city": "Springfield",
+        "state": "IL",
+        "postalCode": "62701",
+        "country": "USA"
+      }
+    ],
+    "contact": [
+      {
+        "name": {
+          "family": "Chen",
+          "given": [
+            "Arthur"
+          ]
+        },
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+1-555-0200"
+          }
+        ],
+        "address": {
+          "line": [
+            "456 Oak Avenue"
+          ],
+          "city": "Springfield",
+          "state": "IL",
+          "postalCode": "62701"
+        },
+        "relationship": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+                "code": "HUSB",
+                "display": "husband"
+              }
+            ]
+          }
+        ],
+        "identifier": [
+          {
+            "system": "http://hospital.org/contact-id",
+            "value": "CONTACT-ARTHUR-001"
+          }
+        ]
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "display": "Dr. Robert Chen",
+        "reference": "Practitioner/PR-ROBERT-CHEN"
+      }
+    ],
+    "identifier": [
+      {
+        "system": "http://hospital.org/mrn",
+        "value": "MRN-1942-002"
+      }
+    ],
+    "_birthDate": {
+      "id": "birthDate-1",
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime",
+          "valueDateTime": "1942-11-23T04:15:00Z"
+        }
+      ]
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/StructureDefinition/patient-birthPlace",
+        "valueAddress": {
+          "city": "Chicago",
+          "state": "IL",
+          "postalCode": "60601"
+        }
+      }
+    ],
+    "link": [
+      {
+        "type": "seealso",
+        "other": {
+          "reference": "Patient/PT-RELATED-001"
+        }
+      }
+    ],
+    "managingOrganization": {
+      "display": "Springfield General Hospital",
+      "reference": "Organization/ORG-SPRINGFIELD"
+    },
+    "text": {
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Patient Eleanor Chen was admitted. Her husband Arthur called at 555-0200. Dr. Robert Chen referred her. Contact backup: eleanor.chen@gmail.com. MRN: MRN-1942-002.</div>"
+    }
+  },
+  "deidentified_strict": {
+    "resourceType": "Patient",
+    "id": "ANON-AY345NO055",
+    "name": [
+      {
+        "family": "Vega",
+        "given": [
+          "Charles",
+          "Jordan"
+        ],
+        "prefix": [
+          "Mrs."
+        ]
+      }
+    ],
+    "birthDate": "1942-01-01",
+    "gender": "female",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-337-220-7929x866"
+      },
+      {
+        "system": "email",
+        "value": "amandacole@example.com"
+      }
+    ],
+    "address": [
+      {
+        "line": [
+          "40776 Eric Route"
+        ],
+        "city": "Hugheshaven",
+        "state": "RI",
+        "postalCode": "62700",
+        "country": "USA"
+      }
+    ],
+    "contact": [
+      {
+        "name": {
+          "family": "Vega",
+          "given": [
+            "Gail"
+          ]
+        },
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+1-468-784-3030"
+          }
+        ],
+        "address": {
+          "line": [
+            "40776 Eric Route"
+          ],
+          "city": "Hugheshaven",
+          "state": "RI",
+          "postalCode": "62700"
+        },
+        "relationship": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+                "code": "HUSB",
+                "display": "husband"
+              }
+            ]
+          }
+        ],
+        "identifier": [
+          {
+            "system": "http://hospital.org/contact-id",
+            "value": "ANON-EX229DB576"
+          }
+        ]
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "display": "ANON-CS395PK187",
+        "reference": "Practitioner/ANON-WM886RA211"
+      }
+    ],
+    "identifier": [
+      {
+        "system": "http://hospital.org/mrn",
+        "value": "ANON-HK724MZ822"
+      }
+    ],
+    "_birthDate": {
+      "id": "birthDate-1",
+      "extension": [
+        {
+          "url": "https://www.murphy-colon.com/",
+          "valueDateTime": "1942-01-01"
+        }
+      ]
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/StructureDefinition/patient-birthPlace",
+        "valueAddress": {
+          "city": "Thomasville",
+          "state": "RI",
+          "postalCode": "60600"
+        }
+      }
+    ],
+    "link": [
+      {
+        "type": "seealso",
+        "other": {
+          "reference": "Patient/ANON-NH367TV705"
+        }
+      }
+    ],
+    "managingOrganization": {
+      "display": "Miller-Jones",
+      "reference": "Organization/ORG-SPRINGFIELD"
+    },
+    "text": {
+      "div": "<div xmlns=\"http://scott.com/\">Patient Jay Richard was admitted. Her Renee David 00269.280.1704x42236. Francis Richard referred her. Contact backup: fhernandez@example.org. ANON-HK724MZ822.</div>"
+    }
+  },
+  "original_elderly": {
+    "resourceType": "Patient",
+    "id": "PT-1930-003",
+    "name": [
+      {
+        "family": "Williams",
+        "given": [
+          "Margaret"
+        ]
+      }
+    ],
+    "birthDate": "1930-01-15",
+    "gender": "female",
+    "_birthDate": {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime",
+          "valueDateTime": "1930-01-15T08:30:00Z"
+        }
+      ]
+    }
+  },
+  "deidentified_elderly": {
+    "resourceType": "Patient",
+    "id": "ANON-HK772VN322",
+    "name": [
+      {
+        "family": "White",
+        "given": [
+          "Donna"
+        ]
+      }
+    ],
+    "birthDate": ">89",
+    "gender": "female",
+    "_birthDate": {
+      "extension": [
+        {
+          "url": "https://www.murphy-colon.com/",
+          "valueDateTime": ">89"
+        }
+      ]
+    }
+  },
+  "audit": {
+    "phi_items_found": 39,
+    "phi_by_type": {
+      "identifier": 6,
+      "name": 6,
+      "date": 2,
+      "phone": 4,
+      "email": 4,
+      "address": 2,
+      "geographic": 9,
+      "organization": 1,
+      "primitive_extension_timestamp": 1,
+      "url": 4
+    },
+    "fields_cleaned": [
+      "_birthDate.extension.valueDateTime",
+      "_birthDate.extension[0].url[text:url]",
+      "address.city",
+      "address.line",
+      "address.postalCode",
+      "address.state",
+      "birthDate",
+      "contact.identifier.value",
+      "extension.valueAddress.city",
+      "extension.valueAddress.postalCode",
+      "extension.valueAddress.state",
+      "generalPractitioner.display",
+      "generalPractitioner.reference",
+      "id",
+      "identifier.value",
+      "link.other.reference",
+      "managingOrganization.display",
+      "name.family",
+      "name.given",
+      "primitive_extension._birthDate.valueDateTime",
+      "telecom.email",
+      "telecom.phone",
+      "text.div[nlp:email]",
+      "text.div[nlp:mrn]",
+      "text.div[nlp:phone_short]",
+      "text.div[nlp:url]",
+      "text.div[text:email]",
+      "text.div[text:phone]",
+      "text.div[text:url]"
+    ],
+    "mode": "pseudonymize",
+    "hipaa_safe_harbor_compliant": true,
+    "standard": "HIPAA Safe Harbor (45 CFR \u00a7164.514(b))",
+    "timestamp": "2026-07-15T15:49:23.389586Z",
+    "details": [
+      {
+        "field": "id",
+        "phi_type": "identifier",
+        "original_length": 11,
+        "replaced_with": "[FAKE_IDENTIFIER]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "name.family",
+        "phi_type": "name",
+        "original_length": 4,
+        "replaced_with": "[FAKE_NAME]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "name.given",
+        "phi_type": "name",
+        "original_length": 7,
+        "replaced_with": "[FAKE_NAME]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "name.given",
+        "phi_type": "name",
+        "original_length": 3,
+        "replaced_with": "[FAKE_NAME]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "birthDate",
+        "phi_type": "date",
+        "original_length": 10,
+        "replaced_with": "[FAKE_DATE]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "telecom.phone",
+        "phi_type": "phone",
+        "original_length": 11,
+        "replaced_with": "[FAKE_PHONE]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "telecom.email",
+        "phi_type": "email",
+        "original_length": 25,
+        "replaced_with": "[FAKE_EMAIL]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "address.line",
+        "phi_type": "address",
+        "original_length": 14,
+        "replaced_with": "[FAKE_ADDRESS]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "address.city",
+        "phi_type": "geographic",
+        "original_length": 11,
+        "replaced_with": "[FAKE_GEOGRAPHIC]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "address.state",
+        "phi_type": "geographic",
+        "original_length": 2,
+        "replaced_with": "[FAKE_GEOGRAPHIC]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "address.postalCode",
+        "phi_type": "geographic",
+        "original_length": 5,
+        "replaced_with": "[FAKE_GEOGRAPHIC]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "identifier.value",
+        "phi_type": "identifier",
+        "original_length": 12,
+        "replaced_with": "[FAKE_IDENTIFIER]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "name.family",
+        "phi_type": "name",
+        "original_length": 4,
+        "replaced_with": "[FAKE_NAME]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "name.given",
+        "phi_type": "name",
+        "original_length": 6,
+        "replaced_with": "[FAKE_NAME]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "telecom.phone",
+        "phi_type": "phone",
+        "original_length": 11,
+        "replaced_with": "[FAKE_PHONE]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "address.line",
+        "phi_type": "address",
+        "original_length": 14,
+        "replaced_with": "[FAKE_ADDRESS]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "address.city",
+        "phi_type": "geographic",
+        "original_length": 11,
+        "replaced_with": "[FAKE_GEOGRAPHIC]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "address.state",
+        "phi_type": "geographic",
+        "original_length": 2,
+        "replaced_with": "[FAKE_GEOGRAPHIC]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "address.postalCode",
+        "phi_type": "geographic",
+        "original_length": 5,
+        "replaced_with": "[FAKE_GEOGRAPHIC]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "contact.identifier.value",
+        "phi_type": "identifier",
+        "original_length": 18,
+        "replaced_with": "[FAKE_IDENTIFIER]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "link.other.reference",
+        "phi_type": "identifier",
+        "original_length": 22,
+        "replaced_with": "[FAKE_IDENTIFIER]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "generalPractitioner.display",
+        "phi_type": "name",
+        "original_length": 15,
+        "replaced_with": "[FAKE_NAME]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "generalPractitioner.reference",
+        "phi_type": "identifier",
+        "original_length": 27,
+        "replaced_with": "[FAKE_IDENTIFIER]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "managingOrganization.display",
+        "phi_type": "organization",
+        "original_length": 28,
+        "replaced_with": "[FAKE_ORGANIZATION]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "_birthDate.extension.valueDateTime",
+        "phi_type": "date",
+        "original_length": 20,
+        "replaced_with": "[FAKE_DATE]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "primitive_extension._birthDate.valueDateTime",
+        "phi_type": "primitive_extension_timestamp",
+        "original_length": 10,
+        "replaced_with": "[FAKE_PRIMITIVE_EXTENSION_TIMESTAMP]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "extension.valueAddress.city",
+        "phi_type": "geographic",
+        "original_length": 7,
+        "replaced_with": "[FAKE_GEOGRAPHIC]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "extension.valueAddress.state",
+        "phi_type": "geographic",
+        "original_length": 2,
+        "replaced_with": "[FAKE_GEOGRAPHIC]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "extension.valueAddress.postalCode",
+        "phi_type": "geographic",
+        "original_length": 5,
+        "replaced_with": "[FAKE_GEOGRAPHIC]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "_birthDate.extension[0].url[text:url]",
+        "phi_type": "url",
+        "original_length": 57,
+        "replaced_with": "[FAKE_URL]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "text.div[text:email]",
+        "phi_type": "email",
+        "original_length": 22,
+        "replaced_with": "[FAKE_EMAIL]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "text.div[text:url]",
+        "phi_type": "url",
+        "original_length": 28,
+        "replaced_with": "[FAKE_URL]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "text.div[nlp:phone_short]",
+        "phi_type": "phone",
+        "original_length": 8,
+        "replaced_with": "[FAKE_PHONE]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "text.div[nlp:mrn]",
+        "phi_type": "identifier",
+        "original_length": 12,
+        "replaced_with": "[FAKE_IDENTIFIER]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "text.div[nlp:url]",
+        "phi_type": "url",
+        "original_length": 23,
+        "replaced_with": "[FAKE_URL]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "text.div[nlp:email]",
+        "phi_type": "email",
+        "original_length": 21,
+        "replaced_with": "[FAKE_EMAIL]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "text.div[text:email]",
+        "phi_type": "email",
+        "original_length": 18,
+        "replaced_with": "[FAKE_EMAIL]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "text.div[text:phone]",
+        "phi_type": "phone",
+        "original_length": 14,
+        "replaced_with": "[FAKE_PHONE]",
+        "action": "pseudonymize"
+      },
+      {
+        "field": "text.div[text:url]",
+        "phi_type": "url",
+        "original_length": 17,
+        "replaced_with": "[FAKE_URL]",
+        "action": "pseudonymize"
+      }
+    ]
+  }
+}

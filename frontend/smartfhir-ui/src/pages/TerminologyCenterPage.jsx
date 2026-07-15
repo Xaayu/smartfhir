@@ -438,16 +438,16 @@ function TerminologyCard({ result, colors, onSelect, onCopy, favorites, onToggle
         background: colors.surface,
         border: `1px solid ${colors.border}`,
         borderRadius: 12,
-        padding: 18,
+        padding: 14,
         cursor: "pointer",
         transition: "all 0.3s ease",
         boxShadow: `0 2px 8px ${colors.shadow}`,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        gap: 12,
+        gap: 10,
         position: "relative",
-        minHeight: 240,
+        minHeight: 180,
       }}
       onMouseEnter={(e) => {
         setIsHovered(true);
@@ -463,7 +463,7 @@ function TerminologyCard({ result, colors, onSelect, onCopy, favorites, onToggle
       }}
     >
       {/* Top row: System badge, Code with copy button, and Category badge */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
           {/* Identifiers Group: Code first, then System Badge */}
           <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
@@ -471,7 +471,7 @@ function TerminologyCard({ result, colors, onSelect, onCopy, favorites, onToggle
               style={{
                 color: "#FFFFFF",
                 fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                fontSize: 15,
+                fontSize: 13,
                 fontWeight: 800,
                 letterSpacing: "0.5px",
               }}
@@ -570,7 +570,7 @@ function TerminologyCard({ result, colors, onSelect, onCopy, favorites, onToggle
       </div>
 
       {/* Concept Name - Primary Heading */}
-      <div style={{ color: "#FFFFFF", fontSize: 17, fontWeight: 800, lineHeight: 1.3 }}>
+      <div style={{ color: "#FFFFFF", fontSize: 15, fontWeight: 800, lineHeight: 1.3 }}>
         {result.display}
       </div>
 
@@ -579,8 +579,8 @@ function TerminologyCard({ result, colors, onSelect, onCopy, favorites, onToggle
         <div
           style={{
             color: "rgba(255, 255, 255, 0.6)",
-            fontSize: 13,
-            lineHeight: 1.5,
+            fontSize: 12,
+            lineHeight: 1.4,
             display: isExpanded ? "block" : "-webkit-box",
             WebkitLineClamp: isExpanded ? "unset" : 2,
             WebkitBoxOrient: "vertical",
@@ -1453,14 +1453,14 @@ function ClinicalCodingAssistant({ colors, isMobile, notify }) {
                     {section.title}
                   </h3>
 
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
+                  <div style={{ overflowX: "hidden" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "auto" }}>
                       <thead>
                         <tr style={{ borderBottom: `2px solid ${colors.border}` }}>
-                          <th style={{ textAlign: "left", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", width: "25%" }}>Entity / Text</th>
-                          <th style={{ textAlign: "left", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", width: "35%" }}>System & Code</th>
-                          <th style={{ textAlign: "center", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", width: "12%" }}>Confidence</th>
-                          <th style={{ textAlign: "left", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", width: "28%" }}>Rationale / Context</th>
+                          <th style={{ textAlign: "left", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Entity / Text</th>
+                          <th style={{ textAlign: "left", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>System & Code</th>
+                          <th style={{ textAlign: "center", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Confidence</th>
+                          <th style={{ textAlign: "left", padding: "12px 8px", color: colors.textDim, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Rationale / Context</th>
                         </tr>
                       </thead>
                       <tbody>

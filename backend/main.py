@@ -59,6 +59,8 @@ from hl7_parser import HL7Parser
 from clinical_nlp import analyze_clinical_note
 import logging
 
+from routers.phi import router as phi_router
+
 
 # 2. Store manager functions (ADD HERE)
 PATIENTS_STORE = store_path("patients.json")
@@ -116,6 +118,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include PHI router (must be after CORS middleware)
+app.include_router(phi_router)
 
 # ── API Key Middleware ─────────────────────────────────────
 EXEMPT_PATHS = {

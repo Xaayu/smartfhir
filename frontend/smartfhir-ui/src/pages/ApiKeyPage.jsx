@@ -563,7 +563,10 @@ export default function ApiKeyPage() {
     <RegistrationForm
       colors={colors} theme={theme} toggleTheme={toggleTheme}
       navigate={navigate} toolLabel={toolLabel}
-      onSuccess={() => setHasKey(true)}
+      onSuccess={() => {
+        setHasKey(true);
+        navigate('/tools');
+      }}
     />
   );
 }

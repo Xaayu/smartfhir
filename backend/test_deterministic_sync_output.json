@@ -1,0 +1,383 @@
+{
+  "deterministic_sync": {
+    "original": {
+      "resourceType": "Patient",
+      "id": "PT-DETERMINISTIC-001",
+      "name": [
+        {
+          "family": "Johnson",
+          "given": [
+            "Sarah",
+            "Marie"
+          ]
+        }
+      ],
+      "birthDate": "1985-03-15",
+      "gender": "female",
+      "contact": [
+        {
+          "name": {
+            "family": "Johnson",
+            "given": [
+              "Michael"
+            ]
+          },
+          "relationship": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+                  "code": "HUSB",
+                  "display": "husband"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "text": {
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Patient Sarah Johnson was admitted. Her husband Michael called at 555-0123. Dr. Robert Smith examined her. Sarah reported pain. Michael is her emergency contact.</div>"
+      }
+    },
+    "deidentified": {
+      "resourceType": "Patient",
+      "id": "ANON-UR616PY891",
+      "name": [
+        {
+          "family": "Henry",
+          "given": [
+            "Anna",
+            "Johnathan"
+          ]
+        }
+      ],
+      "birthDate": "1985-01-01",
+      "gender": "female",
+      "contact": [
+        {
+          "name": {
+            "family": "Henry",
+            "given": [
+              "Samantha"
+            ]
+          },
+          "relationship": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+                  "code": "HUSB",
+                  "display": "husband"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "text": {
+        "div": "<div xmlns=\"http://scott.com/\">Patient Anna Henry was admitted. Her husband Samantha called at 001-275-470-2170x170x6172. Dr. Taylor Reed examined her. Anna reported pain. Samantha is her emergency contact.</div>"
+      }
+    }
+  },
+  "clinician_anonymization": {
+    "original": {
+      "resourceType": "Patient",
+      "id": "PT-CLINICIAN-001",
+      "name": [
+        {
+          "family": "Williams",
+          "given": [
+            "James"
+          ]
+        }
+      ],
+      "birthDate": "1975-08-22",
+      "gender": "male",
+      "text": {
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Patient James Williams was seen by Dr. Emily Chen. Doctor Michael Brown provided consultation. The attending physician Dr. Sarah Davis ordered tests. James Williams, MD was the referring provider.</div>"
+      }
+    },
+    "deidentified": {
+      "resourceType": "Patient",
+      "id": "ANON-ZZ316MP534",
+      "name": [
+        {
+          "family": "Chan",
+          "given": [
+            "Christine"
+          ]
+        }
+      ],
+      "birthDate": "1975-01-01",
+      "gender": "male",
+      "text": {
+        "div": "<div xmlns=\"http://scott.com/\">Patient Christine WilliaJames Emily by Dr. Yang Brady. Dr. Cannon Landry provided consultation. The Dr. Rodriguez. Small Patel ordered tests. Dr. John Davis James the referring provider.</div>"
+      }
+    }
+  },
+  "age_aggregation": {
+    "original": {
+      "resourceType": "Patient",
+      "id": "PT-ELDERLY-001",
+      "name": [
+        {
+          "family": "Anderson",
+          "given": [
+            "Margaret"
+          ]
+        }
+      ],
+      "birthDate": "1925-04-10",
+      "gender": "female",
+      "_birthDate": {
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime",
+            "valueDateTime": "1925-04-10T08:30:00Z"
+          }
+        ]
+      },
+      "text": {
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Patient Margaret Anderson, born in 1925, was admitted for geriatric care.</div>"
+      }
+    },
+    "deidentified": {
+      "resourceType": "Patient",
+      "id": "ANON-VT860AF233",
+      "name": [
+        {
+          "family": "Medina",
+          "given": [
+            "Tara"
+          ]
+        }
+      ],
+      "birthDate": ">89",
+      "gender": "female",
+      "_birthDate": {
+        "extension": [
+          {
+            "url": "https://www.murphy-colon.com/",
+            "valueDateTime": ">89"
+          }
+        ]
+      },
+      "text": {
+        "div": "<div xmlns=\"http://scott.com/\">Patient Tara Medina, born in >89 years, was admitted for geriatric care.</div>"
+      }
+    }
+  },
+  "complex_scenario": {
+    "original": {
+      "resourceType": "Patient",
+      "id": "PT-COMPLEX-001",
+      "name": [
+        {
+          "family": "Garcia",
+          "given": [
+            "Carlos",
+            "Alejandro"
+          ]
+        }
+      ],
+      "birthDate": "1932-11-30",
+      "gender": "male",
+      "contact": [
+        {
+          "name": {
+            "family": "Garcia",
+            "given": [
+              "Maria"
+            ]
+          },
+          "relationship": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+                  "display": "wife"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "generalPractitioner": [
+        {
+          "display": "Dr. Patricia Martinez",
+          "reference": "Practitioner/PR-MARTINEZ"
+        }
+      ],
+      "_birthDate": {
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime",
+            "valueDateTime": "1932-11-30T14:20:00Z"
+          }
+        ]
+      },
+      "text": {
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Patient Carlos Garcia was admitted. His wife Maria Garcia contacted Dr. Patricia Martinez. Dr. Martinez examined Carlos. Maria called at 555-9876. Carlos was born in 1932.</div>"
+      }
+    },
+    "deidentified": {
+      "resourceType": "Patient",
+      "id": "ANON-IJ015XZ386",
+      "name": [
+        {
+          "family": "Baldwin",
+          "given": [
+            "Michelle",
+            "Sherry"
+          ]
+        }
+      ],
+      "birthDate": ">89",
+      "gender": "male",
+      "contact": [
+        {
+          "name": {
+            "family": "Baldwin",
+            "given": [
+              "Seth"
+            ]
+          },
+          "relationship": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+                  "display": "wife"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "generalPractitioner": [
+        {
+          "display": "ANON-JB828UH982",
+          "reference": "Practitioner/ANON-MK822GL925"
+        }
+      ],
+      "_birthDate": {
+        "extension": [
+          {
+            "url": "https://www.murphy-colon.com/",
+            "valueDateTime": ">89"
+          }
+        ]
+      },
+      "text": {
+        "div": "<div xmlns=\"http://scott.com/\">Patient Michelle Baldwin was admitted. His wife Seth Baldwin contacted Dr. Johnson Duran. Dr. Turner Burke Michelle. Seth called at 8208609312x4457. Michelle was born in >89 years.</div>"
+      }
+    }
+  },
+  "summary": {
+    "total_checks": 25,
+    "passed_checks": 25,
+    "failed_checks": 0,
+    "all_checks": [
+      [
+        "Test 1: Patient name synced in text",
+        true
+      ],
+      [
+        "Test 1: Contact name synced in text",
+        true
+      ],
+      [
+        "Test 1: Original patient name removed",
+        true
+      ],
+      [
+        "Test 1: Original contact name removed",
+        true
+      ],
+      [
+        "Test 2: Clinician 'Dr. Emily Chen' anonymized",
+        true
+      ],
+      [
+        "Test 2: Clinician 'Doctor Michael Brown' anonymized",
+        true
+      ],
+      [
+        "Test 2: Clinician 'Dr. Sarah Davis' anonymized",
+        true
+      ],
+      [
+        "Test 2: Clinician 'James Williams, MD' anonymized",
+        true
+      ],
+      [
+        "Test 2: Dr. pattern replaced with fake clinician",
+        true
+      ],
+      [
+        "Test 2: Redact mode uses [PROVIDER]",
+        true
+      ],
+      [
+        "Test 2: Mask mode uses Dr. [REDACTED]",
+        true
+      ],
+      [
+        "Test 2: Pseudonymize mode uses fake names",
+        true
+      ],
+      [
+        "Test 3: Birth date aggregated to >89",
+        true
+      ],
+      [
+        "Test 3: Extension timestamp aggregated to >89",
+        true
+      ],
+      [
+        "Test 3: Birth year removed from text",
+        true
+      ],
+      [
+        "Test 3: Redact mode birthDate null",
+        true
+      ],
+      [
+        "Test 3: Mask mode birthDate >89",
+        true
+      ],
+      [
+        "Test 3: Pseudonymize mode birthDate >89",
+        true
+      ],
+      [
+        "Test 4: Age >89 aggregated",
+        true
+      ],
+      [
+        "Test 4: Extension timestamp aggregated",
+        true
+      ],
+      [
+        "Test 4: Patient name synced in complex text",
+        true
+      ],
+      [
+        "Test 4: Contact name synced in complex text",
+        true
+      ],
+      [
+        "Test 4: Clinician anonymized in complex text",
+        true
+      ],
+      [
+        "Test 4: Original names removed from complex text",
+        true
+      ],
+      [
+        "Test 4: Birth year removed from complex text",
+        true
+      ]
+    ]
+  }
+}

@@ -183,18 +183,18 @@ const tools = [
     path: "/tools/terminology",
   },
   {
+    title: "PHI De-identifier",
+    icon: "🛡️",
+    desc: "HIPAA Safe Harbor compliant de-identification for FHIR resources and bundles with audit trails.",
+    tags: ["HIPAA", "Privacy", "De-identification"],
+    path: "/tools/phi",
+  },
+  {
     title: "API Documentation",
     icon: "🔌",
     desc: "Interactive API examples with code generation in cURL, Python, JavaScript, and Node.js.",
     tags: ["API", "Documentation", "Code"],
     path: "/tools/api",
-  },
-  {
-    title: "Radiology Tools",
-    icon: "🩻",
-    desc: "Support for imaging studies, report mapping, and clinical data handling in radiology workflows.",
-    tags: ["Radiology", "Imaging", "Reports"],
-    path: null,
   },
   {
     title: "More tools coming",
@@ -220,6 +220,10 @@ export default function ToolsPage() {
           <div style={{ display: "flex", gap: 10 }}>
             <button className="btn-secondary" onClick={() => navigate('/api-key')}>Manage API</button>
             <button className="btn-secondary" onClick={() => navigate('/docs')}>View docs</button>
+            <button className="btn-secondary" onClick={() => {
+              localStorage.removeItem('smartfhir_api_key');
+              navigate('/');
+            }} style={{ color: '#F87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}>Logout</button>
           </div>
         </nav>
 
