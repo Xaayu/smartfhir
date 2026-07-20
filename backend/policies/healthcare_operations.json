@@ -1,0 +1,32 @@
+{
+  "purpose": "Healthcare Operations",
+  "description": "Protects identities while preserving workflows that support care coordination and operational reviews.",
+  "privacyLevel": "Medium",
+  "objectives": [
+    "Protect identifiers",
+    "Preserve operational utility",
+    "Reduce re-identification risk",
+    "Support safe workflow access"
+  ],
+  "recommendedFor": [
+    "Care teams",
+    "Operations",
+    "Clinical support",
+    "Internal admin"
+  ],
+  "notRecommendedFor": [
+    "Public release",
+    "Broad sharing",
+    "Research publication"
+  ],
+  "fields": {
+    "patient_name": "REMOVE",
+    "phone": "MASK",
+    "email": "REMOVE",
+    "address": "CITY_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "SHIFT_DATE",
+    "patient_id": "HASH",
+    "clinical_notes": "KEEP"
+  }
+}

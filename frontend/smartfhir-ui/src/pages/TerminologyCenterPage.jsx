@@ -1310,10 +1310,17 @@ function ClinicalCodingAssistant({ colors, isMobile, notify }) {
         throw new Error(data.detail || "Clinical NLP service is unavailable.");
       }
 
-      setBackendAnalysis(data);
-      setAnalysisSource("medspacy");
+      const concepts = conceptsFromBackendAnalysis(data);
+      if (concepts.length > 0) {
+        setBackendAnalysis(data);
+        setAnalysisSource("medspacy");
+        notify("Clinical text analyzed with medSpaCy", "success");
+      } else {
+        setBackendAnalysis(null);
+        setAnalysisSource("mock");
+        notify("No clinical concepts were detected by medSpaCy; using local fallback analyzer.", "warning");
+      }
       setHasAnalyzed(true);
-      notify("Clinical text analyzed with medSpaCy", "success");
     } catch (error) {
       setAnalysisError(error.message);
       setAnalysisSource("mock");

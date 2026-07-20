@@ -1,0 +1,37 @@
+{
+  "purpose": "AI Processing",
+  "description": "Designed for preparing healthcare data for modern AI systems while removing direct identifiers and limiting re-identification risk.",
+  "privacyLevel": "High",
+  "objectives": [
+    "Remove direct identifiers",
+    "Reduce quasi-identifiers",
+    "Minimize re-identification risk",
+    "Preserve clinical usefulness where possible"
+  ],
+  "recommendedFor": [
+    "LLM training",
+    "Model evaluation",
+    "Internal analytics",
+    "AI demonstrations"
+  ],
+  "notRecommendedFor": [
+    "Operational hospital systems",
+    "Patient follow-up",
+    "Identity matching",
+    "Care coordination"
+  ],
+  "fields": {
+    "patient_name": "REMOVE",
+    "phone": "REMOVE",
+    "email": "REMOVE",
+    "address": "GENERALIZE",
+    "dob": "YEAR_ONLY",
+    "dates": "SHIFT_DATE",
+    "patient_id": "HASH",
+    "medical_record_number": "HASH",
+    "organization": "KEEP",
+    "clinical_notes": "KEEP",
+    "lab_results": "KEEP",
+    "medications": "KEEP"
+  }
+}

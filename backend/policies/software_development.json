@@ -1,0 +1,32 @@
+{
+  "purpose": "Software Development",
+  "description": "Creates safe development datasets for product teams while preserving structural patterns and reducing privacy risk.",
+  "privacyLevel": "Medium",
+  "objectives": [
+    "Protect identities",
+    "Support feature development",
+    "Preserve schema fidelity",
+    "Reduce disclosure risk"
+  ],
+  "recommendedFor": [
+    "Development",
+    "Staging",
+    "Integration testing",
+    "App demos"
+  ],
+  "notRecommendedFor": [
+    "Public release",
+    "External sharing",
+    "Operational decisions"
+  ],
+  "fields": {
+    "patient_name": "REPLACE_FAKE",
+    "phone": "MASK",
+    "email": "REPLACE_FAKE",
+    "address": "CITY_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "MONTH_YEAR",
+    "patient_id": "HASH",
+    "clinical_notes": "KEEP"
+  }
+}

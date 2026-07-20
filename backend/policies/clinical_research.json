@@ -1,0 +1,34 @@
+{
+  "purpose": "Clinical Research",
+  "description": "Optimized for cohort studies and controlled research access while preserving analytic value and limiting identity disclosure.",
+  "privacyLevel": "High",
+  "objectives": [
+    "Remove direct identifiers",
+    "Reduce quasi-identifiers",
+    "Support safe cohort analysis",
+    "Preserve clinical usefulness where possible"
+  ],
+  "recommendedFor": [
+    "Clinical studies",
+    "Research cohorts",
+    "Academic analysis",
+    "Trial planning"
+  ],
+  "notRecommendedFor": [
+    "Public release",
+    "Operational patient outreach",
+    "Identity matching"
+  ],
+  "fields": {
+    "patient_name": "REMOVE",
+    "phone": "REMOVE",
+    "email": "REMOVE",
+    "address": "CITY_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "SHIFT_DATE",
+    "patient_id": "HASH",
+    "medical_record_number": "HASH",
+    "clinical_notes": "KEEP",
+    "lab_results": "KEEP"
+  }
+}

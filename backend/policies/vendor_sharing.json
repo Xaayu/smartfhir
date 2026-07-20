@@ -1,0 +1,32 @@
+{
+  "purpose": "Vendor Sharing",
+  "description": "Prepares data for trusted third parties with stronger controls and reduced likelihood of identity recovery.",
+  "privacyLevel": "High",
+  "objectives": [
+    "Remove direct identifiers",
+    "Reduce quasi-identifiers",
+    "Limit third-party exposure",
+    "Preserve limited utility"
+  ],
+  "recommendedFor": [
+    "Vendor review",
+    "Partner analytics",
+    "Managed services",
+    "Contracts"
+  ],
+  "notRecommendedFor": [
+    "Public release",
+    "Broad dissemination",
+    "Patient follow-up"
+  ],
+  "fields": {
+    "patient_name": "REMOVE",
+    "phone": "REMOVE",
+    "email": "REMOVE",
+    "address": "CITY_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "SHIFT_DATE",
+    "patient_id": "HASH",
+    "clinical_notes": "REMOVE"
+  }
+}

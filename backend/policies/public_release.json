@@ -1,0 +1,35 @@
+{
+  "purpose": "Public Release",
+  "description": "Designed for publishing healthcare datasets where patient identity should not be reasonably recoverable while preserving useful clinical information whenever possible.",
+  "privacyLevel": "Maximum",
+  "objectives": [
+    "Remove direct identifiers",
+    "Reduce quasi-identifiers",
+    "Minimize re-identification risk",
+    "Preserve clinical usefulness where possible"
+  ],
+  "recommendedFor": [
+    "Public datasets",
+    "Academic publications",
+    "Demonstrations",
+    "Open research",
+    "Educational examples"
+  ],
+  "notRecommendedFor": [
+    "Operational hospital systems",
+    "Patient follow-up",
+    "Identity matching",
+    "Care coordination"
+  ],
+  "fields": {
+    "patient_name": "REMOVE",
+    "phone": "REMOVE",
+    "email": "REMOVE",
+    "address": "STATE_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "YEAR_ONLY",
+    "patient_id": "HASH",
+    "medical_record_number": "REMOVE",
+    "clinical_notes": "REMOVE"
+  }
+}

@@ -945,6 +945,25 @@ class PHIDeidentifier:
                 if "extension" in ext:
                     self._handle_extensions(ext, resource_id, original_birth_date)
 
+    def _sanitize_value_by_context(self, value: str, field_path: str, resource_id: str = "") -> str:
+        """Apply context-aware sanitization for deeply nested string values."""
+        if not isinstance(value, str):
+            return value
+
+        normalized_path = field_path.lower()
+
+        # Preserve schema and structural values.
+        if field_path.split(".")[-1] in {"resourceType", "status", "gender", "use", "system", "code"}:
+            return value
+
+        if "identifier" in normalized_path and normalized_path.endswith(".value"):
+            return self._deidentify_id(value, field_path)
+
+        if "text" in normalized_path or "note" in normalized_path or normalized_path.endswith(".div"):
+            return self._enhanced_nlp_scan(value, field_path, resource_id, None)
+
+        return self._scan_text_for_phi(value, field_path)
+
     def _recursive_crawl(self, obj: dict, path: str = "", resource_id: str = ""):
         """
         Recursively crawl through FHIR structure to find PHI at any depth.
@@ -954,20 +973,18 @@ class PHIDeidentifier:
         if isinstance(obj, dict):
             for key, value in obj.items():
                 current_path = f"{path}.{key}" if path else key
-                
+
                 # Skip already processed top-level fields
-                if path == "" and key in ["id", "name", "birthDate", "telecom", "address", 
+                if path == "" and key in ["id", "name", "birthDate", "telecom", "address",
                                            "deceasedDateTime", "photo", "identifier", "contact", "extension"]:
                     continue
-                
+
                 # Skip protected schema URLs and namespaces
                 if self._is_protected_schema_url(key, value):
                     continue
-                
+
                 if isinstance(value, str):
-                    # Scan string fields for PHI patterns
-                    if key not in ["resourceType", "status", "gender", "use", "system", "code"]:
-                        obj[key] = self._scan_text_for_phi(value, current_path)
+                    obj[key] = self._sanitize_value_by_context(value, current_path, resource_id)
                 elif isinstance(value, dict):
                     # Recursively process nested objects
                     self._recursive_crawl(value, current_path, resource_id)
@@ -986,6 +1003,17 @@ class PHIDeidentifier:
                             # Handle nested ContactPoint objects
                             elif key == "telecom" or (key.endswith("telecom") and "system" in item):
                                 item = self._deidentify_telecom([item])[0]
+                                value[i] = item
+                            elif key == "identifier":
+                                if item.get("value"):
+                                    item["value"] = self._sanitize_value_by_context(
+                                        item["value"], f"{current_path}[{i}].value", resource_id
+                                    )
+                                if item.get("system"):
+                                    item["system"] = self._sanitize_value_by_context(
+                                        item["system"], f"{current_path}[{i}].system", resource_id
+                                    )
+                                self._recursive_crawl(item, f"{current_path}[{i}]", resource_id)
                                 value[i] = item
                             else:
                                 self._recursive_crawl(item, f"{current_path}[{i}]", resource_id)

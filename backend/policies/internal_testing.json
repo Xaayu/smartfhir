@@ -1,0 +1,32 @@
+{
+  "purpose": "Internal Testing",
+  "description": "Creates realistic de-identified data for QA, sandbox, and development workflows without exposing patient identity.",
+  "privacyLevel": "Medium",
+  "objectives": [
+    "Protect identities",
+    "Generate realistic substitutes",
+    "Support safe testing",
+    "Preserve data structure"
+  ],
+  "recommendedFor": [
+    "QA",
+    "Sandbox",
+    "Software testing",
+    "Training environments"
+  ],
+  "notRecommendedFor": [
+    "Public release",
+    "Patient follow-up",
+    "Production analytics"
+  ],
+  "fields": {
+    "patient_name": "REPLACE_FAKE",
+    "phone": "REPLACE_FAKE",
+    "email": "REPLACE_FAKE",
+    "address": "CITY_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "SHIFT_DATE",
+    "patient_id": "HASH",
+    "clinical_notes": "KEEP"
+  }
+}

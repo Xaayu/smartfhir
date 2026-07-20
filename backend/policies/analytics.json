@@ -1,0 +1,32 @@
+{
+  "purpose": "Analytics",
+  "description": "Balances statistical utility with privacy controls for dashboards, reporting, and internal analysis.",
+  "privacyLevel": "Medium",
+  "objectives": [
+    "Protect identities",
+    "Preserve aggregate trends",
+    "Reduce re-identification risk",
+    "Maintain reporting utility"
+  ],
+  "recommendedFor": [
+    "Dashboards",
+    "Operational reporting",
+    "Internal analytics",
+    "Performance metrics"
+  ],
+  "notRecommendedFor": [
+    "Public release",
+    "External sharing",
+    "Patient follow-up"
+  ],
+  "fields": {
+    "patient_name": "REMOVE",
+    "phone": "REMOVE",
+    "email": "REMOVE",
+    "address": "STATE_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "MONTH_YEAR",
+    "patient_id": "HASH",
+    "clinical_notes": "REMOVE"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "purpose": "Education",
+  "description": "Creates safe teaching examples that preserve the structure of healthcare data without exposing real patient identities.",
+  "privacyLevel": "Medium",
+  "objectives": [
+    "Protect identities",
+    "Support teaching",
+    "Preserve sample structure",
+    "Reduce disclosure risk"
+  ],
+  "recommendedFor": [
+    "Training",
+    "Teaching",
+    "Classroom demos",
+    "Workshops"
+  ],
+  "notRecommendedFor": [
+    "Operational decisions",
+    "Public release",
+    "Care coordination"
+  ],
+  "fields": {
+    "patient_name": "REPLACE_FAKE",
+    "phone": "REMOVE",
+    "email": "REPLACE_FAKE",
+    "address": "CITY_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "MONTH_YEAR",
+    "patient_id": "HASH",
+    "clinical_notes": "KEEP"
+  }
+}

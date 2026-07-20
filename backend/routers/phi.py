@@ -2,10 +2,17 @@
 PHI De-identification API endpoints.
 HIPAA Safe Harbor compliant.
 """
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Literal, Optional
+
 from phi_deidentifier import deidentify, deidentify_bundle
+from policy_engine.executor import apply_policy_to_resource, build_policy_summary
+from policy_engine.loader import list_preset_policies
+from policy_engine.preview import create_policy_preview
+from policy_engine.risk_score import calculate_risk_score
+from policy_engine.validator import validate_policy
 
 router = APIRouter(prefix="/phi", tags=["PHI De-identification"])
 
@@ -20,6 +27,12 @@ class BundleDeidentifyInput(BaseModel):
     bundle: dict
     mode: Literal["redact", "mask", "pseudonymize"] = "pseudonymize"
     audit: bool = True
+
+
+class PolicyApplyInput(BaseModel):
+    resource: dict
+    policy: dict
+    mode: Literal["redact", "mask", "pseudonymize"] = "pseudonymize"
 
 
 @router.post("/deidentify")
@@ -183,3 +196,22 @@ def scan_free_text(payload: dict):
         "phi_types": audit["phi_by_type"],
         "mode": mode
     }
+
+
+@router.get("/policies/presets")
+def get_policies_presets():
+    """Return the available purpose-based presets for the UI."""
+    presets = list_preset_policies()
+    return {"presets": presets}
+
+
+@router.post("/policies/apply")
+def apply_policy(payload: PolicyApplyInput):
+    """Apply a purpose-based policy to an input resource and return a preview summary."""
+    policy = validate_policy(payload.policy)
+    processed = apply_policy_to_resource(policy, payload.resource, payload.mode)
+    summary = build_policy_summary(policy, processed)
+    preview = create_policy_preview(policy, payload.resource, payload.mode)
+    preview["summary"] = summary
+    preview["risk"] = calculate_risk_score(policy, preview.get("stats", {}))
+    return preview

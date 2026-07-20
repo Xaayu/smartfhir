@@ -1,0 +1,32 @@
+{
+  "purpose": "Security Audit",
+  "description": "Protects sensitive information during security assessments while preserving enough context for incident analysis.",
+  "privacyLevel": "High",
+  "objectives": [
+    "Protect identities",
+    "Support security review",
+    "Preserve investigative context",
+    "Reduce disclosure risk"
+  ],
+  "recommendedFor": [
+    "Security review",
+    "Incident investigations",
+    "Assessments",
+    "Internal audits"
+  ],
+  "notRecommendedFor": [
+    "Public release",
+    "Broad dissemination",
+    "Patient follow-up"
+  ],
+  "fields": {
+    "patient_name": "REMOVE",
+    "phone": "REMOVE",
+    "email": "REMOVE",
+    "address": "CITY_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "SHIFT_DATE",
+    "patient_id": "HASH",
+    "clinical_notes": "SCAN_FREE_TEXT"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "purpose": "Legal Review",
+  "description": "Prepares records for audits and compliance review while limiting unnecessary identity exposure.",
+  "privacyLevel": "High",
+  "objectives": [
+    "Protect identities",
+    "Support legal review",
+    "Reduce disclosure risk",
+    "Preserve context for review"
+  ],
+  "recommendedFor": [
+    "Compliance review",
+    "Audit support",
+    "Investigations",
+    "Internal legal work"
+  ],
+  "notRecommendedFor": [
+    "Public release",
+    "Care coordination",
+    "Operational patient outreach"
+  ],
+  "fields": {
+    "patient_name": "REMOVE",
+    "phone": "REMOVE",
+    "email": "REMOVE",
+    "address": "STATE_ONLY",
+    "dob": "YEAR_ONLY",
+    "dates": "SHIFT_DATE",
+    "patient_id": "HASH",
+    "clinical_notes": "KEEP"
+  }
+}

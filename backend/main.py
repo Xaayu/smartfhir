@@ -107,13 +107,22 @@ def get_cors_origins() -> list:
         for origin in configured_origins.split(",")
         if origin.strip()
     ]
-    return origins or ["http://localhost:3000"]
+    if not origins:
+        origins = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ]
+    return origins
 
 
 # Add this RIGHT after app = FastAPI(...)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
+    # Ensure common local dev origins are matched via regex as a fallback
+    allow_origin_regex=r"^https?://localhost(:[0-9]+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -138,6 +147,8 @@ EXEMPT_PATHS = {
     "/admin/delete-user",
     "/_debug_cors",
     "/phi/modes",
+    "/phi/policies/presets",
+    "/phi/policies/apply",
 }
 
 @app.middleware("http")
