@@ -3,6 +3,8 @@ import hashlib
 import re
 from typing import Any, Dict, List, Tuple
 
+from fake_data_genrator import fake_first_name, fake_last_name
+
 from .validator import validate_policy
 
 
@@ -44,7 +46,7 @@ def _fake_value(value: str, field_name: str) -> str:
     if field_name in {"email", "phone"}:
         return f"fake-{digest}@example.org"
     if field_name == "name":
-        return f"Patient {digest[:4]}"
+        return f"{fake_first_name(value)} {fake_last_name(value)}"
     if field_name == "address":
         return f"{digest[:4]} Example Street"
     return f"[{field_name.upper()}_{digest[:4]}]"

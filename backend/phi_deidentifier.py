@@ -8,6 +8,7 @@ import copy
 import re
 from datetime import datetime
 from typing import Literal
+
 from fake_data_genrator import (
     fake_first_name, fake_last_name, fake_email,
     fake_phone, fake_city, fake_state, fake_zip,
@@ -379,6 +380,83 @@ class PHIDeidentifier:
         if not id_val:
             return id_val
         return self._apply(field, id_val, "identifier", fake_id)
+
+    def _classify_identifier(self, identifier: dict) -> str:
+        """Classify an identifier by semantic type using FHIR metadata."""
+        if not isinstance(identifier, dict):
+            return "unknown"
+
+        candidates = []
+        identifier_type = identifier.get("type") or {}
+        if isinstance(identifier_type, dict):
+            type_text = identifier_type.get("text")
+            if isinstance(type_text, str) and type_text.strip():
+                candidates.append(type_text.strip().lower())
+            coding = identifier_type.get("coding") or []
+            if isinstance(coding, list):
+                for item in coding:
+                    if isinstance(item, dict):
+                        code = item.get("code")
+                        if isinstance(code, str) and code.strip():
+                            candidates.append(code.strip().lower())
+                        display = item.get("display")
+                        if isinstance(display, str) and display.strip():
+                            candidates.append(display.strip().lower())
+
+        system = identifier.get("system")
+        if isinstance(system, str) and system.strip():
+            candidates.append(system.strip().lower())
+
+        for candidate in candidates:
+            if any(token in candidate for token in ["ssn", "social security", "passport", "driver", "national", "employee", "insurance", "mrn", "medical record", "record number"]):
+                if "ssn" in candidate or "social security" in candidate:
+                    return "social_security"
+                if "passport" in candidate:
+                    return "passport"
+                if "driver" in candidate:
+                    return "driver_license"
+                if "national" in candidate:
+                    return "national_identifier"
+                if "employee" in candidate:
+                    return "employee_id"
+                if "insurance" in candidate:
+                    return "insurance_number"
+                if "mrn" in candidate or "medical record" in candidate or "record number" in candidate:
+                    return "medical_record_number"
+
+        return "unknown"
+
+    def _transform_identifier_value(self, identifier: dict) -> dict:
+        """Transform only identifier.value based on its semantic category."""
+        if not isinstance(identifier, dict):
+            return identifier
+
+        updated = copy.deepcopy(identifier)
+        value = updated.get("value")
+        if not value:
+            return updated
+
+        category = self._classify_identifier(updated)
+        if category == "social_security":
+            updated["value"] = None
+        elif category in {"passport", "driver_license", "national_identifier"}:
+            updated["value"] = None
+        elif category in {"medical_record_number", "insurance_number", "employee_id"}:
+            updated["value"] = self._apply(
+                "identifier.value",
+                str(value),
+                "identifier",
+                fake_id,
+            )
+        else:
+            updated["value"] = self._apply(
+                "identifier.value",
+                str(value),
+                "identifier",
+                fake_id,
+            )
+
+        return updated
 
     def _scan_text_for_phi(self, text: str, field: str) -> str:
         """
@@ -1073,14 +1151,9 @@ class PHIDeidentifier:
 
         # Identifiers (MRN, SSN, etc)
         if r.get("identifier"):
-            for ident in r["identifier"]:
-                if ident.get("value"):
-                    ident["value"] = self._apply(
-                        "identifier.value",
-                        ident["value"],
-                        "identifier",
-                        fake_id
-                    )
+            for idx, ident in enumerate(r["identifier"]):
+                if isinstance(ident, dict):
+                    r["identifier"][idx] = self._transform_identifier_value(ident)
 
         # Secondary contacts (emergency contacts, family members)
         if r.get("contact"):
@@ -1507,7 +1580,8 @@ class PHIDeidentifier:
 def deidentify(
     resource: dict,
     mode: DeidentifyMode = "pseudonymize",
-    include_audit: bool = True
+    include_audit: bool = True,
+    policy: dict | None = None,
 ) -> dict:
     """
     Main entry point for single resource de-identification.
@@ -1522,6 +1596,15 @@ def deidentify(
     """
     engine = PHIDeidentifier(mode=mode)
     result = engine.deidentify_resource(resource)
+
+    if policy is not None:
+        from policy_engine.compiler import compile_policy
+        from policy_engine.semantic_engine import apply_semantic_policy
+
+        compiled = compile_policy(policy)
+        if any(compiled["actions"].get(category, "KEEP") != "KEEP" for category in ["patient_name", "government_identifier", "address", "birth_date", "free_text"]):
+            result = apply_semantic_policy(policy, resource, mode=mode)
+
     response = {"deidentified_resource": result}
 
     if include_audit:
@@ -1533,13 +1616,26 @@ def deidentify(
 def deidentify_bundle(
     bundle: dict,
     mode: DeidentifyMode = "pseudonymize",
-    include_audit: bool = True
+    include_audit: bool = True,
+    policy: dict | None = None,
 ) -> dict:
     """
     Main entry point for Bundle de-identification.
     """
     engine = PHIDeidentifier(mode=mode)
     result = engine.deidentify_bundle(bundle)
+    if policy is not None:
+        from policy_engine.compiler import compile_policy
+        from policy_engine.semantic_engine import apply_semantic_policy
+
+        compiled = compile_policy(policy)
+        if any(compiled["actions"].get(category, "KEEP") != "KEEP" for category in ["patient_name", "government_identifier", "address", "birth_date", "free_text"]):
+            if isinstance(result.get("entry"), list):
+                for entry in result["entry"]:
+                    resource = entry.get("resource")
+                    if isinstance(resource, dict):
+                        entry["resource"] = apply_semantic_policy(policy, resource, mode=mode)
+
     response = {
         "deidentified_bundle": result,
         "total_resources": len(bundle.get("entry", []))

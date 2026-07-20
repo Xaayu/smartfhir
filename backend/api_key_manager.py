@@ -89,6 +89,8 @@ def generate_api_key() -> str:
 
 
 def db_connect():
+    if not use_postgres():
+        raise RuntimeError("Postgres is not enabled")
     return psycopg.connect(database_url(), row_factory=dict_row)
 
 
@@ -211,7 +213,10 @@ def validate_key(api_key: str) -> dict:
         }
 
     if use_postgres():
-        return validate_key_db(api_key)
+        try:
+            return validate_key_db(api_key)
+        except Exception as exc:
+            print(f"Postgres auth failed; falling back to local key storage: {exc}")
     return validate_key_file(api_key)
 
 
