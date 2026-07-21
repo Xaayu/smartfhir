@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { initGA, trackPageView } from "./utils/analytics";
 
 import LandingPage from "./pages/LandingPage";
 import ApiKeyPage from "./pages/ApiKeyPage";
@@ -13,6 +15,16 @@ import FhirResourcesPage from "./pages/Fhirresourcespage";
 import HL7SuitePage from "./pages/hl7suitpage";
 import ApiPage from "./pages/ApiPage";
 import PHIWizardPage from "./pages/PhideidentifierWizard";
+
+function PageTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    trackPageView(location.pathname + location.search);
+  }, [location]);
+
+  return null;
+}
 
 function HomeRoute() {
   const hasApiKey = Boolean(localStorage.getItem("smartfhirApiKey"));
@@ -99,8 +111,13 @@ function AppRoutes() {
 }
 
 function App() {
+  useEffect(() => {
+    initGA();
+  }, []);
+
   return (
     <BrowserRouter>
+      <PageTracker />
       <AppRoutes />
     </BrowserRouter>
   );
