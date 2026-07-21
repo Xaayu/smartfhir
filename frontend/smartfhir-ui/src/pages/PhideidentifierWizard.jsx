@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE } from "../config";
 import MedTechLogo from "../components/MedTechLogo";
-
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 const DARK = {
   bg: "#0A0E1A",

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE } from "../config";
 import MedTechLogo from "../components/MedTechLogo";
-
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 // ── Design tokens (matches existing dashboard) ────────────
 const C = {
