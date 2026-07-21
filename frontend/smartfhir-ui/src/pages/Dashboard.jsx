@@ -1856,13 +1856,31 @@ function AppContent() {
   ];
 
   return (
-    <div style={{
-      height: isMobile ? "auto" : "100vh", background: colors.bg,
-      color: colors.text, fontFamily: "'Inter', system-ui, sans-serif",
-      display: "flex", flexDirection: isMobile ? "column" : "row",
-      transition: "background 0.3s ease, color 0.3s ease",
-      overflow: isMobile ? "visible" : "hidden",
-    }}>
+    <>
+      <style>{`
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${colors.bg};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${colors.border};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${colors.accent};
+        }
+      `}</style>
+      <div style={{
+        height: isMobile ? "auto" : "100vh", background: colors.bg,
+        color: colors.text, fontFamily: "'Inter', system-ui, sans-serif",
+        display: "flex", flexDirection: isMobile ? "column" : "row",
+        transition: "background 0.3s ease, color 0.3s ease",
+        overflow: isMobile ? "visible" : "hidden",
+      }}>
       <aside style={{
         width: isMobile ? "0" : 250,
         position: isMobile ? "relative" : "sticky",
@@ -2153,6 +2171,7 @@ function AppContent() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

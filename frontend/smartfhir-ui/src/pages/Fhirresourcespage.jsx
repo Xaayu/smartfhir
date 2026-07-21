@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../config";
+import MedTechLogo from "../components/MedTechLogo";
 
 // Theme Context
 const ThemeContext = createContext();
@@ -1491,11 +1492,29 @@ function FhirResourcesContent() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh", background: colors.bg, color: colors.text,
-      fontFamily: "'Inter', system-ui, sans-serif",
-      transition: "background 0.3s ease, color 0.3s ease",
-    }}>
+    <>
+      <style>{`
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${colors.bg};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${colors.border};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${colors.accent};
+        }
+      `}</style>
+      <div style={{
+        minHeight: "100vh", background: colors.bg, color: colors.text,
+        fontFamily: "'Inter', system-ui, sans-serif",
+        transition: "background 0.3s ease, color 0.3s ease",
+      }}>
       <div style={{
         position: "sticky", top: 0, zIndex: 20,
         background: colors.surface, borderBottom: `1px solid ${colors.border}`,
@@ -1505,6 +1524,7 @@ function FhirResourcesContent() {
         justifyContent: "space-between", gap: 12,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <MedTechLogo size={32} onClick={() => navigate("/")} />
           <div>
             <div style={{ fontWeight: 800, fontSize: isMobile ? 16 : 18 }}>FHIR Resources</div>
             <div style={{ color: colors.textDim, fontSize: isMobile ? 12 : 13, marginTop: 2 }}>
@@ -1537,6 +1557,12 @@ function FhirResourcesContent() {
             onMouseLeave={(e) => e.currentTarget.style.background = colors.accentDim}
           >
             ↻ Revalidate All
+          </button>
+          <button onClick={() => navigate("/tools/api")} style={{
+            border: `1px solid ${colors.border}`, background: "transparent", color: colors.text,
+            borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+          }} onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            API Docs
           </button>
           <button onClick={() => navigate("/api-key")} style={{
             border: `1px solid ${colors.border}`, background: "transparent", color: colors.text,
@@ -1625,6 +1651,7 @@ function FhirResourcesContent() {
         <Notifications items={notifications} remove={removeNotification} />
       </div>
     </div>
+    </>
   );
 }
 

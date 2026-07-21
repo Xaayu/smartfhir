@@ -104,22 +104,52 @@
       "learned_at": "2026-06-30T15:15:53.582463",
       "usage_count": 1
     },
-    "telecom.0.system": {
+    "mobilenumber": {
       "fhir_field": "telecom",
       "confidence": 0.8,
-      "learned_at": "2026-06-30T15:42:54.586771",
+      "learned_at": "2026-07-21T17:13:52.770684",
+      "usage_count": 1
+    },
+    "cityname": {
+      "fhir_field": "name",
+      "confidence": 0.8,
+      "learned_at": "2026-07-21T17:13:52.809349",
+      "usage_count": 1
+    },
+    "statecode": {
+      "fhir_field": "address.state",
+      "confidence": 0.8,
+      "learned_at": "2026-07-21T17:13:52.846499",
+      "usage_count": 1
+    },
+    "name.0.given": {
+      "fhir_field": "name",
+      "confidence": 0.8,
+      "learned_at": "2026-07-21T17:13:52.881052",
+      "usage_count": 1
+    },
+    "name.0.family": {
+      "fhir_field": "name",
+      "confidence": 0.8,
+      "learned_at": "2026-07-21T17:13:52.914681",
+      "usage_count": 1
+    },
+    "telecom.0.system": {
+      "fhir_field": "phone",
+      "confidence": 0.8,
+      "learned_at": "2026-07-21T17:20:50.653200",
       "usage_count": 1
     },
     "telecom.0.value": {
-      "fhir_field": "telecom",
+      "fhir_field": "phone",
       "confidence": 0.8,
-      "learned_at": "2026-06-30T15:42:54.702082",
+      "learned_at": "2026-07-21T17:20:50.693368",
       "usage_count": 1
     },
     "telecom.0.use": {
-      "fhir_field": "telecom",
+      "fhir_field": "phone",
       "confidence": 0.8,
-      "learned_at": "2026-06-30T15:42:54.761211",
+      "learned_at": "2026-07-21T17:20:50.722824",
       "usage_count": 1
     }
   }

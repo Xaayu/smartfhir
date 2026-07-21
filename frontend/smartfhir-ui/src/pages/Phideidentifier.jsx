@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import MedTechLogo from "../components/MedTechLogo";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
@@ -1354,7 +1355,7 @@ export default function PHIDeidentifier({ apiKey }) {
       }}>
         <div style={{ flex: "1 1 minmax(280px, 1fr)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 20 }}>🛡️</span>
+            <MedTechLogo size={24} onClick={() => navigate("/")} />
             <h1 style={{
               fontFamily: "'Space Grotesk', sans-serif",
               fontSize: 18, fontWeight: 700,
@@ -1375,6 +1376,13 @@ export default function PHIDeidentifier({ apiKey }) {
             fontWeight: 500, transition: "all 0.2s",
             fontFamily: "inherit",
           }}>{theme === "dark" ? "☀️" : "🌙"}</button>
+          <button onClick={() => navigate('/tools/api')} style={{
+            background: C.surface, border: `1px solid ${C.border}`,
+            borderRadius: 8, padding: "7px 14px",
+            color: C.dim, fontSize: 12, cursor: "pointer",
+            fontWeight: 500, transition: "all 0.2s",
+            fontFamily: "inherit",
+          }}>API Docs</button>
           <button onClick={() => navigate('/api-key')} style={{
             background: C.surface, border: `1px solid ${C.border}`,
             borderRadius: 8, padding: "7px 14px",

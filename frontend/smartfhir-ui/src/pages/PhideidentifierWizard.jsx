@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import MedTechLogo from "../components/MedTechLogo";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
@@ -1167,11 +1168,29 @@ export default function PHIWizardPage({ apiKey }) {
   const previewRiskBand = getRiskBand(Math.max(20, 25 + previewPhiEstimate * 2 + (selectedPurpose.toLowerCase().includes("public") ? 10 : 0)));
 
   return (
-    <div style={{ background: theme === "dark" ? DARK.bg : "#f5f7fb", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", color: theme === "dark" ? DARK.text : "#0f172a" }}>
+    <>
+      <style>{`
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${theme === "dark" ? DARK.bg : "#f5f7fb"};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${DARK.border};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${DARK.accent};
+        }
+      `}</style>
+      <div style={{ background: theme === "dark" ? DARK.bg : "#f5f7fb", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", color: theme === "dark" ? DARK.text : "#0f172a" }}>
       <div style={{ borderBottom: `1px solid ${DARK.border}`, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div style={{ flex: "1 1 minmax(280px, 1fr)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 20 }}>🛡️</span>
+            <MedTechLogo size={24} onClick={() => navigate("/")} />
             <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Privacy Wizard</h1>
             <Badge color={DARK.teal}>Enterprise Workflow</Badge>
           </div>
@@ -1181,6 +1200,7 @@ export default function PHIWizardPage({ apiKey }) {
           <button onClick={toggleTheme} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "7px 12px", color: DARK.dim, fontSize: 12, cursor: "pointer", fontWeight: 500 }}>
             {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
           </button>
+          <button onClick={() => navigate("/tools/api")} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "7px 14px", color: DARK.dim, fontSize: 12, cursor: "pointer", fontWeight: 500 }}>API Docs</button>
           <button onClick={() => navigate("/api-key")} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "7px 14px", color: DARK.dim, fontSize: 12, cursor: "pointer", fontWeight: 500 }}>Manage API</button>
           <button onClick={() => navigate("/tools")} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "7px 14px", color: DARK.dim, fontSize: 12, cursor: "pointer", fontWeight: 500 }}>Back to Tools</button>
         </div>
@@ -1673,5 +1693,6 @@ export default function PHIWizardPage({ apiKey }) {
         phiCount={result?.audit_report?.phi_items_found || 5}
       />
     </div>
+    </>
   );
 }

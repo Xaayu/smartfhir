@@ -37,16 +37,34 @@ export default function AdminGate() {
   }
 
   return (
-    <main style={{
-      minHeight: "100vh",
-      background: COLORS.bg,
-      color: COLORS.text,
-      fontFamily: "'Inter', system-ui, sans-serif",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "clamp(16px, 5vw, 24px)",
-    }}>
+    <>
+      <style>{`
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${COLORS.bg};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${COLORS.border};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${COLORS.accent};
+        }
+      `}</style>
+      <main style={{
+        minHeight: "100vh",
+        background: COLORS.bg,
+        color: COLORS.text,
+        fontFamily: "'Inter', system-ui, sans-serif",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "clamp(16px, 5vw, 24px)",
+      }}>
       <div style={{
         background: COLORS.surface,
         border: `1px solid ${COLORS.border}`,
@@ -154,5 +172,6 @@ export default function AdminGate() {
         </button>
       </div>
     </main>
+    </>
   );
 }

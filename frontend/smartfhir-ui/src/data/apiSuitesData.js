@@ -185,6 +185,137 @@ export const API_SUITES = {
       },
     ],
   },
+  phi: {
+    id: "phi",
+    name: "Purpose-Based De-Identification",
+    description: "HIPAA Safe Harbor de-identification & policy engine based on data usage purpose",
+    icon: "🛡️",
+    color: "#10B981",
+    resources: [
+      {
+        id: "purpose-deidentify",
+        name: "De-identify Resource (Purpose-Based)",
+        description: "De-identify a single FHIR resource using a purpose policy (e.g. Clinical Research, AI Training)",
+        method: "POST",
+        endpoint: "/api/v1/phi/deidentify",
+        body: {
+          resource: {
+            resourceType: "Patient",
+            id: "P101",
+            name: [
+              {
+                given: ["John"],
+                family: "Doe"
+              }
+            ],
+            telecom: [
+              {
+                system: "phone",
+                value: "555-0199"
+              },
+              {
+                system: "email",
+                value: "john.doe@example.com"
+              }
+            ],
+            birthDate: "1985-04-12",
+            address: [
+              {
+                line: ["123 Main St"],
+                city: "Boston",
+                state: "MA",
+                postalCode: "02115"
+              }
+            ]
+          },
+          mode: "pseudonymize",
+          purpose: "Clinical Research",
+          audit: true
+        }
+      },
+      {
+        id: "bundle-deidentify",
+        name: "De-identify Bundle (Purpose-Based)",
+        description: "De-identify an entire FHIR Bundle with entries tailored for a targeted usage purpose",
+        method: "POST",
+        endpoint: "/api/v1/phi/deidentify-bundle",
+        body: {
+          bundle: {
+            resourceType: "Bundle",
+            type: "collection",
+            entry: [
+              {
+                resource: {
+                  resourceType: "Patient",
+                  id: "P101",
+                  name: [{ given: ["Jane"], family: "Smith" }],
+                  birthDate: "1990-06-15"
+                }
+              },
+              {
+                resource: {
+                  resourceType: "Observation",
+                  id: "O101",
+                  code: { text: "Blood Pressure" },
+                  valueQuantity: { value: 120, unit: "mmHg" }
+                }
+              }
+            ]
+          },
+          mode: "pseudonymize",
+          purpose: "Vendor Sharing",
+          audit: true
+        }
+      },
+      {
+        id: "policy-presets",
+        name: "Purpose Policy Presets",
+        description: "Fetch pre-configured purpose policies (Clinical Research, AI Training, Vendor Sharing, Public Release, etc.)",
+        method: "GET",
+        endpoint: "/api/v1/phi/policies/presets",
+        queryParams: {},
+        body: null
+      },
+      {
+        id: "policy-apply",
+        name: "Apply Policy & Risk Preview",
+        description: "Apply a purpose policy to a resource and calculate privacy risk scores and field action previews",
+        method: "POST",
+        endpoint: "/api/v1/phi/policies/apply",
+        body: {
+          resource: {
+            resourceType: "Patient",
+            id: "P101",
+            name: [{ given: ["Alice"], family: "Walker" }],
+            telecom: [{ system: "email", value: "alice@example.com" }],
+            birthDate: "1982-11-03"
+          },
+          policy: {
+            purpose: "AI Processing & Model Training",
+            fields: {
+              patient_name: "REMOVE",
+              phone: "REMOVE",
+              email: "REMOVE",
+              address: "STATE_ONLY",
+              dob: "AGE_GROUP"
+            }
+          },
+          mode: "pseudonymize"
+        }
+      },
+      {
+        id: "free-text-scan",
+        name: "Free-Text PHI Scanner",
+        description: "Scan clinical notes or unstructured text for PHI and redact, mask, or pseudonymize detected entities",
+        method: "POST",
+        endpoint: "/api/v1/phi/scan-text",
+        body: {
+          text: "Patient John Doe (DOB 1980-05-12) contact at 555-1234 or john@example.com",
+          mode: "pseudonymize"
+        }
+      }
+    ]
+  },
 };
 
 // Helper function to get the full URL with query parameters

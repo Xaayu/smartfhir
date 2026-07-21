@@ -1,10 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../config";
+import MedTechLogo from "../components/MedTechLogo";
 
 const styles = `
   * { box-sizing: border-box; }
   body { margin: 0; }
+
+  /* Custom scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+
   :root {
     --bg: #071119;
     --surface: #101b27;
@@ -477,6 +495,31 @@ function HL7SuitePage() {
     navigate("/");
   };
 
+  const handleCopy = () => {
+    if (view.result) {
+      navigator.clipboard.writeText(view.result).then(() => {
+        addToast("Copied to clipboard!", "success");
+      }).catch(() => {
+        addToast("Failed to copy", "error");
+      });
+    }
+  };
+
+  const handleDownload = () => {
+    if (view.result) {
+      const blob = new Blob([view.result], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hl7-${activeTab}-result.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      addToast("Download started!", "success");
+    }
+  };
+
   const renderRightPanelContent = () => {
     if (activeTab === "parse" || activeTab === "explore") {
        if (view.result === "Running...") return <div className="hl7-output">Running...</div>;
@@ -600,9 +643,12 @@ function HL7SuitePage() {
       <style>{styles}</style>
       <div className="hl7-shell">
         <div className="hl7-topbar">
-          <div>
-            <p className="hl7-topbar-title">HL7 Suite</p>
-            <p className="hl7-topbar-sub">Convert, parse, validate, and explore HL7 messages in one workspace.</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <MedTechLogo size={32} onClick={() => navigate("/")} />
+            <div>
+              <p className="hl7-topbar-title">HL7 Suite</p>
+              <p className="hl7-topbar-sub">Convert, parse, validate, and explore HL7 messages in one workspace.</p>
+            </div>
           </div>
           <div className="hl7-topbar-right">
             <button className="hl7-icon-btn" onClick={toggleTheme} aria-label="Toggle Theme">
@@ -612,6 +658,7 @@ function HL7SuitePage() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
               )}
             </button>
+            <button className="hl7-back-btn" onClick={() => navigate("/tools/api")}>API Docs</button>
             <button className="hl7-back-btn" onClick={() => navigate("/api-key")}>Manage API</button>
             <button className="hl7-back-btn" onClick={() => navigate("/tools")}>Back to tools</button>
             <button className="hl7-logout-btn" onClick={handleLogout}>Logout</button>
@@ -704,6 +751,35 @@ function HL7SuitePage() {
           <div className="hl7-card">
             <div className="hl7-card-header">
               <p className="hl7-label">{view.rightLabel}</p>
+              {view.result && view.result !== "Running..." && !view.result.startsWith("Error") && (
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button 
+                    className="hl7-subtab" 
+                    style={{ margin: 0, padding: '6px 12px' }} 
+                    onClick={handleCopy}
+                    title="Copy to clipboard"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy
+                  </button>
+                  <button 
+                    className="hl7-subtab" 
+                    style={{ margin: 0, padding: '6px 12px' }} 
+                    onClick={handleDownload}
+                    title="Download result"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download
+                  </button>
+                </div>
+              )}
             </div>
             {renderRightPanelContent()}
           </div>

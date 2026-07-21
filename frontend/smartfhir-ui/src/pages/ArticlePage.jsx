@@ -8,6 +8,22 @@ const styles = `
   * { box-sizing: border-box; }
   body { margin: 0; }
 
+  /* Custom scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+
   :root {
     --bg: #0A0E1A;
     --surface: #1A2035;

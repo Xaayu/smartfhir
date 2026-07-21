@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../config";
+import MedTechLogo from "../components/MedTechLogo";
 
 const THEMES = {
   dark: {
@@ -1936,6 +1937,13 @@ function TerminologyCenterPage() {
   const [isMobile, setIsMobile] = useState(false);
   const detailPanelRef = useRef(null);
 
+  // Code Mapper state
+  const [sourceSystem, setSourceSystem] = useState("SNOMED CT");
+  const [targetSystem, setTargetSystem] = useState("ICD-10");
+  const [mapperInput, setMapperInput] = useState("");
+  const [mappingResults, setMappingResults] = useState(null);
+  const [isMapping, setIsMapping] = useState(false);
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
@@ -2071,6 +2079,104 @@ function TerminologyCenterPage() {
     );
   }
 
+  function handleMapCode() {
+    const code = mapperInput.trim();
+    if (!code) {
+      notify("Please enter a code to map", "error");
+      return;
+    }
+
+    setIsMapping(true);
+    setMappingResults(null);
+
+    setTimeout(() => {
+      // Find the source code in the mock data
+      const sourceCode = ALL_RESULTS.find(
+        (r) => r.code.toLowerCase() === code.toLowerCase() && r.system === sourceSystem
+      );
+
+      if (!sourceCode) {
+        setMappingResults({
+          success: false,
+          message: `Code "${code}" not found in ${sourceSystem}`,
+          suggestions: ALL_RESULTS
+            .filter((r) => r.system === sourceSystem)
+            .filter((r) =>
+              r.code.toLowerCase().includes(code.toLowerCase()) ||
+              r.display.toLowerCase().includes(code.toLowerCase())
+            )
+            .slice(0, 3),
+        });
+        notify("Code not found in source system", "error");
+      } else {
+        // Find mappings to target system using the "related" field
+        const mappings = [];
+        
+        // Check if source code has related field
+        if (sourceCode.related && Array.isArray(sourceCode.related)) {
+          sourceCode.related.forEach((related) => {
+            const [relatedCode, relatedDesc] = related.split(" - ");
+            const relatedCodeData = ALL_RESULTS.find(
+              (r) => r.code === relatedCode && r.system === targetSystem
+            );
+            
+            if (relatedCodeData) {
+              mappings.push({
+                code: relatedCodeData.code,
+                display: relatedCodeData.display,
+                system: relatedCodeData.system,
+                confidence: 95,
+                matchType: "Direct mapping",
+              });
+            }
+          });
+        }
+
+        // Also search for codes in target system with similar display names
+        const similarTargetCodes = ALL_RESULTS
+          .filter((r) => r.system === targetSystem)
+          .filter((r) => {
+            const sourceDisplay = sourceCode.display.toLowerCase();
+            const targetDisplay = r.display.toLowerCase();
+            return sourceDisplay === targetDisplay || 
+                   targetDisplay.includes(sourceDisplay) ||
+                   sourceDisplay.includes(targetDisplay);
+          })
+          .slice(0, 3);
+
+        similarTargetCodes.forEach((codeData) => {
+          if (!mappings.find((m) => m.code === codeData.code)) {
+            mappings.push({
+              code: codeData.code,
+              display: codeData.display,
+              system: codeData.system,
+              confidence: 75,
+              matchType: "Semantic similarity",
+            });
+          }
+        });
+
+        if (mappings.length > 0) {
+          setMappingResults({
+            success: true,
+            sourceCode,
+            mappings: mappings.sort((a, b) => b.confidence - a.confidence),
+          });
+          notify(`Found ${mappings.length} mapping(s) to ${targetSystem}`, "success");
+        } else {
+          setMappingResults({
+            success: false,
+            message: `No mappings found from ${sourceSystem} to ${targetSystem}`,
+            sourceCode,
+          });
+          notify("No mappings found", "error");
+        }
+      }
+
+      setIsMapping(false);
+    }, 800);
+  }
+
   const FILTER_CHIPS_SYSTEMS = [
     "All",
     "SNOMED CT",
@@ -2094,17 +2200,48 @@ function TerminologyCenterPage() {
   ];
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        background: colors.bg,
-        color: colors.text,
-        fontFamily: "'Inter', system-ui, sans-serif",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
+    <>
+      <style>
+        {`
+          /* Custom scrollbar styling for webkit browsers */
+          ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+          }
+          
+          ::-webkit-scrollbar-track {
+            background: ${colors.bg};
+            border-radius: 10px;
+          }
+          
+          ::-webkit-scrollbar-thumb {
+            background: ${colors.border};
+            border-radius: 10px;
+            border: 2px solid ${colors.bg};
+          }
+          
+          ::-webkit-scrollbar-thumb:hover {
+            background: ${colors.muted};
+          }
+          
+          /* Firefox scrollbar styling */
+          * {
+            scrollbar-width: thin;
+            scrollbar-color: ${colors.border} ${colors.bg};
+          }
+        `}
+      </style>
+      <div
+        style={{
+          height: "100vh",
+          background: colors.bg,
+          color: colors.text,
+          fontFamily: "'Inter', system-ui, sans-serif",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
       {/* Notifications */}
       <div
         style={{
@@ -2174,8 +2311,9 @@ function TerminologyCenterPage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <MedTechLogo size={32} onClick={() => navigate("/")} />
               <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: colors.text }}>
-                🧬 Terminology Center
+                Terminology Center
               </h1>
             </div>
 
@@ -2191,6 +2329,12 @@ function TerminologyCenterPage() {
                 ) : (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                 )}
+              </button>
+              <button onClick={() => navigate("/tools/api")} style={{
+                border: `1px solid ${colors.border}`, background: "transparent", color: colors.text,
+                borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+              }} onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                API Docs
               </button>
               <button onClick={() => navigate("/api-key")} style={{
                 border: `1px solid ${colors.border}`, background: "transparent", color: colors.text,
@@ -2271,11 +2415,12 @@ function TerminologyCenterPage() {
         style={{
           flex: 1,
           overflowY: "auto",
+          overflowX: "hidden",
           padding: isMobile ? "20px 16px 60px" : "32px 24px 60px",
           background: colors.bg,
         }}
       >
-        <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gap: 24 }}>
+        <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gap: 24, overflowX: "hidden" }}>
 
           {/* SEARCH & BROWSE TAB */}
           {activeTab === "search" && (
@@ -2942,6 +3087,8 @@ function TerminologyCenterPage() {
                     Source System
                   </label>
                   <select
+                    value={sourceSystem}
+                    onChange={(e) => setSourceSystem(e.target.value)}
                     style={{
                       width: "100%",
                       padding: "10px 12px",
@@ -2973,6 +3120,8 @@ function TerminologyCenterPage() {
                     Target System
                   </label>
                   <select
+                    value={targetSystem}
+                    onChange={(e) => setTargetSystem(e.target.value)}
                     style={{
                       width: "100%",
                       padding: "10px 12px",
@@ -2990,7 +3139,45 @@ function TerminologyCenterPage() {
                   </select>
                 </div>
               </div>
+              <div style={{ marginTop: 16 }}>
+                <label
+                  style={{
+                    display: "block",
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginBottom: 8,
+                  }}
+                >
+                  Enter Code to Map
+                </label>
+                <input
+                  type="text"
+                  placeholder={`e.g., code from ${sourceSystem}`}
+                  value={mapperInput}
+                  onChange={(e) => setMapperInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleMapCode();
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    border: `1px solid ${colors.border}`,
+                    background: colors.bg,
+                    color: colors.text,
+                    fontSize: 14,
+                    fontFamily: "monospace",
+                    transition: "all 0.2s ease",
+                    boxShadow: `0 2px 8px ${colors.shadow}`,
+                  }}
+                />
+              </div>
               <button
+                onClick={handleMapCode}
+                disabled={isMapping}
                 style={{
                   marginTop: 16,
                   background: colors.accent,
@@ -3001,19 +3188,162 @@ function TerminologyCenterPage() {
                   cursor: "pointer",
                   fontWeight: 700,
                   fontSize: 14,
+                  opacity: isMapping ? 0.7 : 1,
                 }}
               >
-                Map Code
+                {isMapping ? "Mapping..." : "Map Code"}
               </button>
-              <div
-                style={{
-                  marginTop: 24,
-                  color: colors.textDim,
-                  fontSize: 13,
-                }}
-              >
-                Feature coming soon with real-time mapping data
-              </div>
+
+              {/* Mapping Results */}
+              {mappingResults && (
+                <div
+                  style={{
+                    marginTop: 24,
+                    padding: 20,
+                    borderRadius: 12,
+                    border: `1px solid ${colors.border}`,
+                    background: colors.surface,
+                    textAlign: "left",
+                  }}
+                >
+                  {mappingResults.success ? (
+                    <div style={{ display: "grid", gap: 16 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: colors.success }}>
+                          ✓ Mapping Found
+                        </div>
+                        <div style={{ fontSize: 12, color: colors.textDim }}>
+                          {mappingResults.mappings.length} result(s)
+                        </div>
+                      </div>
+
+                      {/* Source Code Info */}
+                      <div
+                        style={{
+                          padding: 12,
+                          borderRadius: 8,
+                          background: colors.bg,
+                          border: `1px solid ${colors.border}`,
+                        }}
+                      >
+                        <div style={{ fontSize: 11, color: colors.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
+                          Source Code ({mappingResults.sourceCode.system})
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 700, color: colors.accent }}>
+                            {mappingResults.sourceCode.code}
+                          </span>
+                          <span style={{ fontSize: 13, color: colors.text }}>
+                            {mappingResults.sourceCode.display}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Mappings */}
+                      <div>
+                        <div style={{ fontSize: 11, color: colors.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>
+                          Mapped to {targetSystem}
+                        </div>
+                        <div style={{ display: "grid", gap: 8 }}>
+                          {mappingResults.mappings.map((mapping, index) => (
+                            <div
+                              key={index}
+                              style={{
+                                padding: 12,
+                                borderRadius: 8,
+                                background: colors.bg,
+                                border: `1px solid ${colors.border}`,
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                gap: 12,
+                              }}
+                            >
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                  <span style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 700, color: colors.accent }}>
+                                    {mapping.code}
+                                  </span>
+                                  <span style={{ fontSize: 13, color: colors.text }}>
+                                    {mapping.display}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: 11, color: colors.textDim }}>
+                                  {mapping.matchType}
+                                </div>
+                              </div>
+                              <div
+                                style={{
+                                  padding: "4px 8px",
+                                  borderRadius: 6,
+                                  background: mapping.confidence >= 90 ? colors.success + "22" : colors.warning + "22",
+                                  color: mapping.confidence >= 90 ? colors.success : colors.warning,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {mapping.confidence}% match
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: colors.error, marginBottom: 8 }}>
+                        ❌ Mapping Failed
+                      </div>
+                      <div style={{ color: colors.textDim, marginBottom: 12 }}>
+                        {mappingResults.message}
+                      </div>
+                      {mappingResults.suggestions && mappingResults.suggestions.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, color: colors.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>
+                            Suggested Codes
+                          </div>
+                          <div style={{ display: "grid", gap: 8 }}>
+                            {mappingResults.suggestions.map((sug) => (
+                              <button
+                                key={sug.code}
+                                onClick={() => {
+                                  setMapperInput(sug.code);
+                                  handleMapCode();
+                                }}
+                                style={{
+                                  padding: 10,
+                                  borderRadius: 8,
+                                  background: colors.bg,
+                                  border: `1px solid ${colors.border}`,
+                                  color: colors.text,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  fontSize: 13,
+                                  transition: "all 0.2s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.borderColor = colors.accent;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.borderColor = colors.border;
+                                }}
+                              >
+                                <div style={{ fontFamily: "monospace", fontWeight: 700, color: colors.accent }}>
+                                  {sug.code}
+                                </div>
+                                <div style={{ color: colors.textDim, fontSize: 12, marginTop: 2 }}>
+                                  {sug.display}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -3178,6 +3508,22 @@ function TerminologyCenterPage() {
       </main>
 
       <style>{`
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${colors.bg};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${colors.border};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${colors.accent};
+        }
+
         @keyframes slideIn {
           from {
             opacity: 0;
@@ -3246,6 +3592,7 @@ function TerminologyCenterPage() {
         }
       `}</style>
     </div>
+    </>
   );
 }
 export default TerminologyCenterPage;

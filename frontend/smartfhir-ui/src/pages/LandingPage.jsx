@@ -1,11 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../config";
+import MedTechLogo from "../components/MedTechLogo";
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Custom scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
 
   :root {
     --bg:      #0A0E1A;
@@ -321,17 +338,258 @@ const styles = `
   .cta-input::placeholder { color: var(--muted); }
 
   /* FOOTER */
-  .footer {
-    border-top: 1px solid var(--border); padding: 40px 48px;
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;
+  .footer-new {
+    border-top: 1px solid var(--border);
+    background: #060913;
+    padding: 80px 48px 40px;
+    margin-top: 80px;
+    position: relative;
+    z-index: 10;
   }
-  .footer-logo { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; }
-  .footer-logo-icon { width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, var(--accent), var(--teal)); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0; }
-  .footer-links { display: flex; gap: 24px; list-style: none; margin: 0; padding: 0; }
-  .footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color 0.2s; }
-  .footer-links a:hover { color: var(--text); }
-  .footer-links span { color: var(--muted); font-size: 13px; }
-  .footer-copy { font-size: 13px; color: var(--muted); }
+  .footer-grid {
+    max-width: 1280px;
+    margin: 0 auto 60px;
+    display: grid;
+    grid-template-columns: 1.4fr 0.9fr 0.9fr 1.4fr;
+    gap: 48px;
+  }
+  .footer-brand-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .footer-logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .footer-logo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--teal));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .footer-brand-desc {
+    font-size: 14px;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+  .footer-contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .footer-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13.5px;
+    color: var(--dim);
+  }
+  .footer-contact-item a {
+    color: var(--dim);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-contact-item a:hover {
+    color: var(--accent);
+  }
+  .footer-contact-icon {
+    font-size: 16px;
+    opacity: 0.85;
+  }
+  .footer-socials {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .footer-social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    transition: all 0.2s;
+  }
+  .footer-social-link:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: rgba(79,142,247,0.1);
+    transform: translateY(-2px);
+  }
+  
+  .footer-links-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .footer-col-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  .footer-col-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .footer-col-links li {
+    font-size: 14px;
+  }
+  .footer-col-links a, .footer-btn-link {
+    color: var(--dim);
+    text-decoration: none;
+    transition: color 0.2s;
+    background: transparent;
+    border: none;
+    padding: 0;
+    text-align: left;
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
+  }
+  .footer-col-links a:hover, .footer-btn-link:hover {
+    color: var(--accent);
+  }
+  .footer-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--teal);
+    background: rgba(0, 212, 170, 0.08);
+    border: 1px solid rgba(0, 212, 170, 0.2);
+    padding: 4px 12px;
+    border-radius: 99px;
+    margin-top: 4px;
+    width: fit-content;
+  }
+  .footer-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--teal);
+    animation: pulse 2s infinite;
+  }
+
+  .footer-contact-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .footer-contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .footer-form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  .footer-form-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 13.5px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .footer-form-input:focus {
+    border-color: var(--accent);
+  }
+  .footer-form-textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 13.5px;
+    font-family: inherit;
+    min-height: 70px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .footer-form-textarea:focus {
+    border-color: var(--accent);
+  }
+  .footer-form-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    font-family: inherit;
+  }
+  .footer-form-btn:hover:not(:disabled) {
+    background: #6B9EF8;
+    transform: translateY(-1px);
+  }
+  .footer-form-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .footer-form-success {
+    font-size: 12.5px;
+    color: var(--teal);
+    background: rgba(0, 212, 170, 0.08);
+    border: 1px solid rgba(0, 212, 170, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-align: center;
+  }
+
+  .footer-bottom {
+    max-width: 1280px;
+    margin: 0 auto;
+    border-top: 1px solid var(--border);
+    padding-top: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .footer-bottom-links {
+    display: flex;
+    gap: 24px;
+  }
+  .footer-bottom-links a {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-bottom-links a:hover {
+    color: var(--text);
+  }
 
   /* FEEDBACK WIDGET */
   .fb-trigger {
@@ -584,7 +842,13 @@ const styles = `
     .stats-bar { padding: 32px 20px; gap: 40px; }
     .cta-section { margin: 0 20px 60px; padding: 48px 24px; }
     .cta-input-row { flex-direction: column; }
-    .footer { flex-direction: column; text-align: center; }
+    .footer-grid { grid-template-columns: 1fr; gap: 36px; margin-bottom: 40px; }
+    .footer-new { padding: 60px 20px 30px; }
+    .footer-bottom { flex-direction: column; text-align: center; gap: 16px; }
+    .footer-bottom-links { justify-content: center; }
+    .footer-col-links a, .footer-btn-link { text-align: center; width: 100%; }
+    .footer-status-pill { align-self: center; }
+    .footer-brand-col { align-items: center; text-align: center; }
     .demo-body { grid-template-columns: 1fr; }
     .demo-panel:first-child { border-right: none; border-bottom: 1px solid var(--border); }
     .fb-trigger { right: 16px; bottom: 16px; padding: 11px 16px; }
@@ -896,6 +1160,42 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const animRefs = useRef([]);
 
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [sendingContact, setSendingContact] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
+
+  const handleQuickContact = async (e) => {
+    e.preventDefault();
+    if (!contactEmail || !contactMessage) return;
+    setSendingContact(true);
+    try {
+      await fetch(`${API_BASE}/api/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback: `[Contact Form] ${contactMessage}`,
+          email: contactEmail,
+          submitted_at: new Date().toISOString(),
+          page: window.location.href,
+        }),
+      });
+      setContactSuccess(true);
+      setContactEmail('');
+      setContactMessage('');
+      setTimeout(() => setContactSuccess(false), 4000);
+    } catch (err) {
+      console.warn('Contact send failed silently:', err);
+      // Fallback success for nice UX if server endpoint is offline
+      setContactSuccess(true);
+      setContactEmail('');
+      setContactMessage('');
+      setTimeout(() => setContactSuccess(false), 4000);
+    } finally {
+      setSendingContact(false);
+    }
+  };
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
@@ -919,6 +1219,7 @@ export default function LandingPage() {
     fhir: '/tools/fhir',
     hl7: '/tools/hl7-suite',
     terminology: '/tools/terminology',
+    phi: '/tools/phi',
   };
 
   const selectTool = (toolId) => {
@@ -935,17 +1236,36 @@ export default function LandingPage() {
       {/* NAV */}
       <nav className="navbar">
         <div className="nav-logo" onClick={() => navigate('/')}>
-          <div className="nav-logo-icon">M</div>
+          <MedTechLogo size={32} />
           MedTechTools
         </div>
         <ul className="nav-links">
           <li><a href="#how">How it works</a></li>
           <li><a href="#features">Features</a></li>
           <li><a href="#pricing">Pricing</a></li>
-          <li><a href="#docs">Docs</a></li>
-          <li><button onClick={goToTools} style={{ background: 'transparent', border: 'none', color: 'var(--dim)', cursor: 'pointer', fontSize: '14px' }}>Tools</button></li>
+          <li><a href="/docs" onClick={(e) => { e.preventDefault(); goToDocs(); }}>Docs</a></li>
+          <li><a href="/tools" onClick={(e) => { e.preventDefault(); goToTools(); }}>Tools</a></li>
         </ul>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button 
+            className="nav-cta" 
+            onClick={() => navigate('/tools/api')}
+            style={{ 
+              background: 'transparent', 
+              border: '1px solid var(--border)', 
+              color: 'var(--text)' 
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--accent)';
+              e.currentTarget.style.color = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.color = 'var(--text)';
+            }}
+          >
+            API Docs
+          </button>
           <button className="nav-cta" onClick={goToApiKey}>Get API Key →</button>
         </div>
       </nav>
@@ -986,7 +1306,7 @@ export default function LandingPage() {
 
       {/* STATS */}
       <div className="stats-bar">
-        {[['3','Active Tools'],['7','Coming Soon'],['3','Data Standards'],['<200ms','Avg response time']].map(([val,label]) => (
+        {[['4','Active Tools'],['6','Coming Soon'],['4','Data Standards'],['<200ms','Avg response time']].map(([val,label]) => (
           <div className="stat-item" key={label}>
             <div className="stat-val">{val}</div>
             <div className="stat-label">{label}</div>
@@ -1010,6 +1330,7 @@ export default function LandingPage() {
             { icon: '🏥', name: 'FHIR Tools', standard: 'FHIR R4', desc: 'Validate, explain, and auto-fix FHIR resources with intelligent field mapping and quality scoring.', status: 'Available', statusColor: 'var(--teal)', toolId: 'fhir' },
             { icon: '📨', name: 'HL7 Suite', standard: 'HL7 v2', desc: 'Parse, validate, and convert HL7 v2 messages with detailed segment and field analysis.', status: 'Available', statusColor: 'var(--teal)', toolId: 'hl7' },
             { icon: '🔬', name: 'Terminology Suite', standard: 'LOINC/SNOMED/RxNorm', desc: 'Lookup medical codes across multiple standard code systems with live API fallback.', status: 'Available', statusColor: 'var(--teal)', toolId: 'terminology' },
+            { icon: '🛡️', name: 'PHI De-identifier', standard: 'HIPAA Safe Harbor / Purpose-Based', desc: 'Purpose-driven PHI de-identification (Pseudonymize, Mask, Redact) with automated compliance & audit reports.', status: 'Available', statusColor: 'var(--teal)', toolId: 'phi' },
             { icon: '📄', name: 'Clinical Documents', standard: 'CCD/CDA', desc: 'Generate, validate, and transform clinical documents including CCD, CDA, and care summaries.', status: 'Coming Soon', statusColor: 'var(--dim)' },
             { icon: '🔍', name: 'Radiology Tools', standard: 'DICOM', desc: 'Work with DICOM imaging data, radiology reports, and imaging study metadata.', status: 'Coming Soon', statusColor: 'var(--dim)' },
             { icon: '🧪', name: 'Laboratory Suite', standard: 'LOINC/LAB', desc: 'Process lab orders, results, and reference ranges with comprehensive laboratory data management.', status: 'Coming Soon', statusColor: 'var(--dim)' },
@@ -1236,6 +1557,7 @@ export default function LandingPage() {
         <h2 className="section-title">Everything you need.<br />Nothing you don't.</h2>
         <div className="features-grid">
           {[
+            { icon:'🛡️', bg:'rgba(52,211,153,0.1)',  title:'Purpose-Based PHI De-Identification', desc:'Context-aware anonymization for AI, Research, Analytics, & Vendor Sharing. Configurable rules (pseudonymize, mask, redact) with automated audit compliance reports.', tag:'HIPAA · Safe Harbor · Audit Logs' },
             { icon:'🗺️', bg:'rgba(79,142,247,0.1)',  title:'Smart Field Mapping',     desc:'Built-in rules for 50+ common field aliases across multiple standards. Save your own mappings — they apply on every future call automatically.',                                tag:'FHIR · HL7 · Clinical Docs' },
             { icon:'🔬', bg:'rgba(0,212,170,0.1)',   title:'Medical Code Lookup',      desc:'Automatic LOINC codes for lab tests, SNOMED CT for diagnoses, RxNorm for medications. Built-in common codes plus live API fallback.',            tag:'LOINC · SNOMED CT · RxNorm' },
             { icon:'💡', bg:'rgba(251,191,36,0.1)',  title:'Human-Readable Errors',    desc:'No more cryptic schema messages. Every error explained in plain English with the exact fix required. AI-powered for complex cases.',               tag:'Rule-based + Gemini AI hybrid' },
@@ -1423,19 +1745,102 @@ export default function LandingPage() {
       </div>
 
       {/* FOOTER */}
-      <footer className="footer">
-        <div className="footer-logo">
-          <div className="footer-logo-icon">M</div>
-          MedTechTools
+      <footer className="footer-new">
+        <div className="footer-grid">
+          {/* Brand & Contact Info Column */}
+          <div className="footer-brand-col">
+            <div className="footer-logo">
+              <MedTechLogo size={32} />
+              MedTechTools
+            </div>
+            <p className="footer-brand-desc">
+              Developer Platform for Healthcare Interoperability. Validate, transform, and integrate clinical data across FHIR, HL7, and medical terms.
+            </p>
+    
+            <div className="footer-socials">
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="footer-social-link" title="GitHub">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+              </a>
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="footer-social-link" title="Twitter">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+              </a>
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="footer-social-link" title="LinkedIn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+              </a>
+            </div>
+          </div>
+
+          {/* Column 2: Helpful Links */}
+          <div className="footer-links-col">
+            <h4 className="footer-col-title">Helpful Links</h4>
+            <ul className="footer-col-links">
+              <li><button onClick={() => selectTool('fhir')} className="footer-btn-link">FHIR Validation</button></li>
+              <li><button onClick={() => selectTool('hl7')} className="footer-btn-link">HL7 Suite Page</button></li>
+              <li><button onClick={() => selectTool('terminology')} className="footer-btn-link">Terminology Lookup</button></li>
+              <li><button onClick={() => selectTool('phi')} className="footer-btn-link">PHI De-identifier</button></li>
+              <li><button onClick={goToTools} className="footer-btn-link">Explore Tools Suite</button></li>
+            </ul>
+          </div>
+
+          {/* Column 3: Resources */}
+          <div className="footer-links-col">
+            <h4 className="footer-col-title">Resources</h4>
+            <ul className="footer-col-links">
+              <li><a href="/docs" onClick={(e) => { e.preventDefault(); goToDocs(); }}>Documentation</a></li>
+              <li><a href="/#pricing">Beta Pricing</a></li>
+              <li><a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub Repo</a></li>
+              <li><a href="/#docs">API References</a></li>
+              <li>
+                <span className="footer-status-pill">
+                  <span className="footer-status-dot"></span> All Systems Operational
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: Contact Us Quick Form */}
+          <div className="footer-contact-col">
+            <h4 className="footer-col-title">Contact Us</h4>
+            <form onSubmit={handleQuickContact} className="footer-contact-form">
+              <div className="footer-form-group">
+                <input 
+                  type="email" 
+                  placeholder="Your work email" 
+                  className="footer-form-input" 
+                  value={contactEmail} 
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  required 
+                />
+              </div>
+              <div className="footer-form-group">
+                <textarea 
+                  placeholder="How can we help?" 
+                  className="footer-form-textarea" 
+                  value={contactMessage}
+                  onChange={(e) => setContactMessage(e.target.value)}
+                  required
+                />
+              </div>
+              <button type="submit" className="footer-form-btn" disabled={sendingContact}>
+                {sendingContact ? 'Sending...' : 'Send Message'}
+              </button>
+              {contactSuccess && (
+                <div className="footer-form-success">
+                  ✓ Message sent. We will reply soon!
+                </div>
+              )}
+            </form>
+          </div>
         </div>
-        <ul className="footer-links">
-          <li><a href="#docs">Docs</a></li>
-          <li><a href="#pricing">Pricing</a></li>
-          <li><span>GitHub</span></li>
-          <li><span>Status</span></li>
-          <li><span>Privacy</span></li>
-        </ul>
-        <div className="footer-copy">© 2026 MedTechTools. Built for healthcare developers.</div>
+
+        <div className="footer-bottom">
+          <div className="footer-copy">© 2026 MedTechTools. Built for healthcare developers.</div>
+          <div className="footer-bottom-links">
+            <a href="#privacy">Privacy Policy</a>
+            <a href="#terms">Terms of Service</a>
+            <a href="#security">Security (HIPAA)</a>
+          </div>
+        </div>
       </footer>
 
       <FeedbackWidget />

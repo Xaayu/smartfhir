@@ -131,13 +131,31 @@ export default function AdminPage() {
   }, []);
 
   return (
-    <main style={{
-      minHeight: "100vh",
-      background: COLORS.bg,
-      color: COLORS.text,
-      fontFamily: "'Inter', system-ui, sans-serif",
-      padding: 32,
-    }}>
+    <>
+      <style>{`
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${COLORS.bg};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${COLORS.border};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${COLORS.accent};
+        }
+      `}</style>
+      <main style={{
+        minHeight: "100vh",
+        background: COLORS.bg,
+        color: COLORS.text,
+        fontFamily: "'Inter', system-ui, sans-serif",
+        padding: 32,
+      }}>
       <div style={{ maxWidth: 1160, margin: "0 auto" }}>
         <header style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", marginBottom: 28 }}>
           <div>
@@ -448,5 +466,6 @@ export default function AdminPage() {
         )}
       </div>
     </main>
+    </>
   );
 }

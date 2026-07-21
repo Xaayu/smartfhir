@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TryWithApiCard from "../components/TryWithApiCard";
+import PurposeDeidFlowCard from "../components/PurposeDeidFlowCard";
 import { API_BASE } from "../config";
 import { API_SUITES, buildEndpointUrl } from "../data/apiSuitesData";
 
@@ -54,7 +55,7 @@ export default function ApiPage() {
   const [selectedResource, setSelectedResource] = useState(() => API_SUITES.fhir.resources[0]);
   const colors = THEMES[theme];
 
-  const currentSuite = API_SUITES[selectedSuite];
+  const currentSuite = API_SUITES[selectedSuite] || API_SUITES.fhir;
   const currentResource = selectedResource || currentSuite.resources[0];
   const currentEndpoint = buildEndpointUrl(
     `${API_BASE}${currentResource.endpoint}`,
@@ -70,7 +71,25 @@ export default function ApiPage() {
 
 
   return (
-    <div style={{ minHeight: "100vh", background: colors.bg, color: colors.text, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <>
+      <style>{`
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${colors.bg};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${colors.border};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${colors.accent};
+        }
+      `}</style>
+      <div style={{ minHeight: "100vh", background: colors.bg, color: colors.text, fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* Header */}
       <header style={{
         position: "sticky",
@@ -87,7 +106,7 @@ export default function ApiPage() {
         <div>
           <div style={{ fontWeight: 800, fontSize: 17 }}>API Documentation</div>
           <div style={{ color: colors.textDim, fontSize: 12, marginTop: 2 }}>
-            Multi-suite API playground for FHIR, HL7, and Terminology
+            Multi-suite API playground for FHIR, HL7, Terminology, and Purpose-Based De-Identification
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -200,6 +219,11 @@ export default function ApiPage() {
           </div>
         </div>
 
+        {/* Purpose-Based De-Identification Architecture & Flow Section */}
+        {selectedSuite === "phi" && (
+          <PurposeDeidFlowCard colors={colors} />
+        )}
+
         {/* Step 2: Resource/Action Selection */}
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Step 2: Select Resource / Action</h2>
@@ -300,5 +324,6 @@ export default function ApiPage() {
         </div>
       </main>
     </div>
+    </>
   );
 }

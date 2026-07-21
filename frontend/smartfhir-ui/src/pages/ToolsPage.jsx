@@ -1,10 +1,27 @@
 import { useNavigate } from "react-router-dom";
+import MedTechLogo from "../components/MedTechLogo";
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
 
   * { box-sizing: border-box; }
   body { margin: 0; }
+
+  /* Custom scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
 
   :root {
     --bg: #0A0E1A;
@@ -214,10 +231,11 @@ export default function ToolsPage() {
       <div className="tools-shell">
         <nav className="tools-nav">
           <div className="tools-brand" onClick={() => navigate('/')}>
-            <div className="tools-brand-icon">M</div>
+            <MedTechLogo size={32} />
             <span>MedTechTools</span>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn-secondary" onClick={() => navigate('/tools/api')}>API Docs</button>
             <button className="btn-secondary" onClick={() => navigate('/api-key')}>Manage API</button>
             <button className="btn-secondary" onClick={() => navigate('/docs')}>View docs</button>
             <button className="btn-secondary" onClick={() => {

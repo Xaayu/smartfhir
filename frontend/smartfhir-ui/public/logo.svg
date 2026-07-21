@@ -12,33 +12,11 @@
       <stop offset="50%" stop-color="#06B6D4" />
       <stop offset="100%" stop-color="#00D4AA" />
     </linearGradient>
-
-    <!-- Text Gradient -->
-    <linearGradient id="medtech-text-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#3B82F6" />
-      <stop offset="100%" stop-color="#00D4AA" />
-    </linearGradient>
   </defs>
 
   <!-- Base Icon Group (Centered) -->
   <g transform="translate(46, 30)">
-    <!-- Main M Left Stem & V Fold (Blue) -->
-    <path d="M 50 140 
-             C 50 115, 65 100, 90 100 
-             L 135 100 
-             C 155 100, 170 110, 185 130 
-             L 210 170 
-             L 190 200 
-             L 135 125 
-             L 105 125 
-             L 105 280 
-             C 105 305, 90 320, 65 320 
-             L 50 320 
-             Z" 
-          fill="url(#medtech-blue-grad)" />
-
-    <!-- Continuous M Main Shape -->
-    <!-- Outer M Body -->
+    <!-- Main M Body -->
     <path d="M 65 80
              C 45 80, 30 95, 30 120
              L 30 290

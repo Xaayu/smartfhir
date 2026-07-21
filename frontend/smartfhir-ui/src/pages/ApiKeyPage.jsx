@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE } from "../config";
+import MedTechLogo from "../components/MedTechLogo";
 
 const THEMES = {
   dark: {
@@ -181,7 +182,25 @@ function KeyManagerDashboard({ colors, theme, toggleTheme, onLogout, navigate })
     : "";
 
   return (
-    <div style={{ minHeight: "100vh", background: colors.bg, color: colors.text, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <>
+      <style>{`
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${colors.bg};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${colors.border};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${colors.accent};
+        }
+      `}</style>
+      <div style={{ minHeight: "100vh", background: colors.bg, color: colors.text, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <header style={{
         position: "sticky", top: 0, zIndex: 100,
         background: colors.surface, borderBottom: `1px solid ${colors.border}`,
@@ -343,7 +362,8 @@ function KeyManagerDashboard({ colors, theme, toggleTheme, onLogout, navigate })
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -385,6 +405,22 @@ function RegistrationForm({ colors, theme, toggleTheme, navigate, toolLabel, onS
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, color: colors.text, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <style>{`
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${colors.bg};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${colors.border};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${colors.accent};
+        }
+
         @media (max-width: 768px) {
           .registration-body {
             grid-template-columns: 1fr !important;
@@ -411,11 +447,7 @@ function RegistrationForm({ colors, theme, toggleTheme, navigate, toolLabel, onS
           display: "flex", alignItems: "center", gap: 10,
           background: "none", border: "none", cursor: "pointer", color: colors.text,
         }}>
-          <div style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: "linear-gradient(135deg, #4F8EF7, #00D4AA)",
-            display: "grid", placeItems: "center", color: "#fff", fontWeight: 800, fontSize: 14,
-          }}>M</div>
+          <MedTechLogo size={30} />
           <span style={{ fontWeight: 700, fontSize: 15 }}>MedTechTools</span>
         </button>
         <HeaderButtons colors={colors} theme={theme} toggleTheme={toggleTheme} onNavigate={navigate} showLogout={false} />

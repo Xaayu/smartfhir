@@ -72,14 +72,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/tools/api"
-        element={
-          <ProtectedRoute>
-            <ApiPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/tools/api" element={<ApiPage />} />
       <Route
         path="/tools/phi"
         element={

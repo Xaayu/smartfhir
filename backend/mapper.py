@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple, Any, Optional, Union
 from datetime import datetime
 from collections import defaultdict
 import uuid
+from validator import fix_date
 
 BUILT_IN_PATH = "mappings/built_in.json"
 USER_MAPPINGS_PATH = "mappings/user_mappings.json"
@@ -512,7 +513,6 @@ def validate_and_enrich_mapping(mapped_data: dict, resource_type: str) -> dict:
         
         # Ensure birthDate is in correct format
         if 'birthDate' in enriched:
-            from validator import fix_date
             enriched['birthDate'] = fix_date(enriched['birthDate'])
     
     elif resource_type == "Observation":
@@ -520,10 +520,22 @@ def validate_and_enrich_mapping(mapped_data: dict, resource_type: str) -> dict:
         if 'status' not in enriched:
             enriched['status'] = 'final'
         
-        # Ensure subject reference is normalized
+        # Ensure subject reference is normalized (handle both dict and string)
         if 'subject' in enriched:
-            if not str(enriched['subject']).startswith('Patient/'):
-                enriched['subject'] = f"Patient/{enriched['subject']}"
+            subject = enriched['subject']
+            if isinstance(subject, dict):
+                # Already a reference dict, ensure it has proper format
+                if 'reference' in subject:
+                    ref = subject['reference']
+                    if not str(ref).startswith('Patient/'):
+                        subject['reference'] = f"Patient/{ref}"
+                else:
+                    # Dict without reference field, convert to string and format
+                    enriched['subject'] = f"Patient/{subject.get('id', subject)}"
+            elif isinstance(subject, str):
+                # String reference, ensure proper format
+                if not subject.startswith('Patient/'):
+                    enriched['subject'] = f"Patient/{subject}"
     
     elif resource_type == "MedicationRequest":
         # Ensure status is present
@@ -577,6 +589,18 @@ def enhanced_map_to_fhir(input_data: Union[dict, list, str], resource_type: str 
         
         for field, value in normalized_data.items():
             if field == "resourcetype":
+                continue
+            
+            # Skip structured telecom fields - they'll be handled by build_telecoms
+            if field.startswith("telecom."):
+                raw_mapped[field] = value
+                applied_rules.append({
+                    "original_field": field,
+                    "mapped_to": field,
+                    "rule_type": "structured",
+                    "confidence": 1.0
+                })
+                confidence_scores.append(1.0)
                 continue
             
             normalized = normalize_field_name(field)
@@ -691,7 +715,6 @@ def map_to_fhir(input_data: Union[dict, list, str], resource_type: str = "Patien
     
     # Original implementation for backward compatibility
     built_in, user_mappings, learned_mappings = load_mappings(resource_type)
-    built_in, user_mappings, learned_mappings = load_mappings(resource_type)
 
     raw_mapped = {}
     unmapped = []
@@ -780,7 +803,10 @@ def map_to_fhir(input_data: Union[dict, list, str], resource_type: str = "Patien
         "applied_rules": applied_rules,
         "mapping_complete": len(unmapped) == 0,
         "overall_confidence": overall_confidence,
-        "resource_type": resource_type
+        "resource_type": resource_type,
+        "input_fields_processed": len(input_data),
+        "fields_mapped": len(raw_mapped),
+        "processing_status": "success"
     }
 
 
@@ -1611,20 +1637,47 @@ def build_telecoms(raw: dict) -> list:
     """Build telecom list from raw data"""
     telecoms = []
     
-    # Phone numbers
-    phone_fields = ["phone", "phonenumber", "phone_number", "mobile", "contact", "tel"]
+    # Check if telecom is already structured (from complex mappings)
+    if "telecom.0.system" in raw or "telecom.0.value" in raw:
+        # Build from structured telecom data
+        for i in range(10):  # Check up to 10 telecom entries
+            system = raw.get(f"telecom.{i}.system")
+            value = raw.get(f"telecom.{i}.value")
+            use = raw.get(f"telecom.{i}.use", "home")
+            
+            if system and value:
+                telecoms.append({
+                    "system": system,
+                    "value": value,
+                    "use": use
+                })
+            elif not system and not value and i == 0:
+                break  # No more entries if first entry is empty
+        
+        if telecoms:
+            return telecoms
+    
+    # Phone numbers - expanded field list
+    phone_fields = ["phone", "phonenumber", "phone_number", "mobile", "contact", "tel", 
+                    "telephone", "homephone", "home_phone", "workphone", "work_phone",
+                    "cellphone", "cell_phone", "mobilenumber", "mobile_number"]
     for field in phone_fields:
         if field in raw and raw[field]:
             phone_value = str(raw[field])
-            if re.search(r'[\d\-\+\(\)\s]{7,}', phone_value):
+            # More lenient phone pattern check
+            if re.search(r'[\d\-\+\(\)\s]{5,}', phone_value):
+                use = "mobile" if "mobile" in field.lower() or "cell" in field.lower() else "home"
+                if "work" in field.lower():
+                    use = "work"
                 telecoms.append({
                     "system": "phone",
                     "value": phone_value,
-                    "use": "mobile" if "mobile" in field.lower() else "home"
+                    "use": use
                 })
     
-    # Email addresses
-    email_fields = ["email", "emailaddress", "email_address", "mail"]
+    # Email addresses - expanded field list
+    email_fields = ["email", "emailaddress", "email_address", "mail", "emailaddress",
+                    "e_mail", "emailaddress", "contactemail", "contact_email"]
     for field in email_fields:
         if field in raw and raw[field]:
             email_value = str(raw[field])
@@ -1651,32 +1704,78 @@ def build_addresses(raw: dict) -> list:
     addresses = []
     address_entry = {}
     
-    # Address components
+    # Address components - both prefixed and non-prefixed versions
     field_mappings = {
+        # Text/full address
         "address": "text",
+        "fulladdress": "text",
+        "full_address": "text",
+        "streetaddress": "text",
+        "street_address": "text",
+        
+        # Line/street
         "address.line": "line",
         "address.street": "line",
+        "street": "line",
+        "street_line": "line",
+        "addressline": "line",
+        "address_line": "line",
+        
+        # City
         "address.city": "city",
+        "city": "city",
+        "cityname": "city",
+        "city_name": "city",
+        
+        # State/province
         "address.state": "state",
         "address.province": "state",
+        "state": "state",
+        "statecode": "state",
+        "state_code": "state",
+        "province": "state",
+        "region": "state",
+        
+        # Postal code/zip
         "address.postalcode": "postalCode",
         "address.zip": "postalCode",
+        "zip": "postalCode",
+        "zipcode": "postalCode",
+        "zip_code": "postalCode",
+        "postalcode": "postalCode",
+        "postal_code": "postalCode",
+        "postcode": "postalCode",
+        "post_code": "postalCode",
+        
+        # Country
         "address.country": "country",
+        "country": "country",
+        "countrycode": "country",
+        "country_code": "country",
+        
+        # Use and type
         "address.use": "use",
         "address.type": "type"
     }
     
     for raw_field, fhir_field in field_mappings.items():
-        if raw_field in raw:
+        if raw_field in raw and raw[raw_field]:
             value = raw[raw_field]
             if fhir_field == "line":
                 address_entry[fhir_field] = [str(value)] if not isinstance(value, list) else value
             else:
                 address_entry[fhir_field] = value
     
+    # Also check for direct postalCode field (from built-in mappings)
+    if "postalCode" in raw and raw["postalCode"]:
+        address_entry["postalCode"] = raw["postalCode"]
+    
     # District/county
-    if "address.district" in raw or "address.county" in raw:
-        address_entry["district"] = raw.get("address.district") or raw.get("address.county")
+    district_fields = ["address.district", "address.county", "district", "county"]
+    for field in district_fields:
+        if field in raw and raw[field]:
+            address_entry["district"] = raw[field]
+            break
     
     # Period
     if "address.period" in raw:
