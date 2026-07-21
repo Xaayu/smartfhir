@@ -144,11 +144,20 @@ def _apply_action_to_address(address_list: List[Dict[str, Any]], action: str) ->
             result.append(entry)
             continue
         updated = copy.deepcopy(entry)
-        if action == "CITY_ONLY" and "city" in updated:
-            updated["city"] = _transform_string(updated.get("city"), action, "address")
-        if action == "STATE_ONLY" and "state" in updated:
-            updated["state"] = _transform_string(updated.get("state"), action, "address")
-        if action in {"GENERALIZE", "REMOVE", "MASK", "REPLACE_FAKE", "HASH", "YEAR_ONLY", "MONTH_YEAR"}:
+        if action == "CITY_ONLY":
+            if "city" in updated:
+                updated["city"] = _transform_string(updated.get("city"), action, "address")
+            updated.pop("line", None)
+            updated.pop("text", None)
+            updated.pop("postalCode", None)
+        elif action == "STATE_ONLY":
+            if "state" in updated:
+                updated["state"] = _transform_string(updated.get("state"), action, "address")
+            updated.pop("line", None)
+            updated.pop("city", None)
+            updated.pop("text", None)
+            updated.pop("postalCode", None)
+        elif action in {"GENERALIZE", "REMOVE", "MASK", "REPLACE_FAKE", "HASH", "YEAR_ONLY", "MONTH_YEAR"}:
             if "line" in updated:
                 updated["line"] = [
                     _transform_string(item, action, "address") if isinstance(item, str) else item

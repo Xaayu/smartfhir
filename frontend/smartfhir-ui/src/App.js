@@ -12,7 +12,7 @@ import TerminologyCenterPage from "./pages/TerminologyCenterPage";
 import FhirResourcesPage from "./pages/Fhirresourcespage";
 import HL7SuitePage from "./pages/hl7suitpage";
 import ApiPage from "./pages/ApiPage";
-import PHIDeidentifier from "./pages/Phideidentifier";
+import PHIWizardPage from "./pages/PhideidentifierWizard";
 
 function HomeRoute() {
   const hasApiKey = Boolean(localStorage.getItem("smartfhirApiKey"));
@@ -72,7 +72,7 @@ function AppRoutes() {
         path="/tools/phi"
         element={
           <ProtectedRoute>
-            <PHIDeidentifier apiKey={localStorage.getItem("smartfhirApiKey")} />
+            <PHIWizardPage apiKey={localStorage.getItem("smartfhirApiKey")} />
           </ProtectedRoute>
         }
       />
