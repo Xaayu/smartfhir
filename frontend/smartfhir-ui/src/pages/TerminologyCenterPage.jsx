@@ -2115,7 +2115,7 @@ function TerminologyCenterPage() {
         // Check if source code has related field
         if (sourceCode.related && Array.isArray(sourceCode.related)) {
           sourceCode.related.forEach((related) => {
-            const [relatedCode, relatedDesc] = related.split(" - ");
+            const [relatedCode] = related.split(" - ");
             const relatedCodeData = ALL_RESULTS.find(
               (r) => r.code === relatedCode && r.system === targetSystem
             );
