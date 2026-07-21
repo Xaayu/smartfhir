@@ -274,7 +274,7 @@ function PurposeCard({ preset, selected, onSelect }) {
       textAlign: "left",
       color: DARK.text,
       transition: "all 0.18s",
-    }}>
+    }} className="mobile-full-width">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontSize: 18 }}>
           {preset.name === "AI Processing" ? "🤖" : preset.name === "Clinical Research" ? "🔬" : preset.name === "Analytics" ? "📊" : preset.name === "Internal Testing" ? "🧪" : preset.name === "Software Development" ? "👨‍💻" : preset.name === "Vendor Sharing" ? "🤝" : preset.name === "Public Release" ? "🌐" : preset.name === "Education" ? "📚" : preset.name === "Healthcare Operations" ? "🏥" : preset.name === "Legal Review" ? "⚖️" : "🔍"}
@@ -304,7 +304,7 @@ function StrategyCard({ mode, selected, onSelect }) {
       textAlign: "left",
       color: DARK.text,
       transition: "all 0.18s",
-    }}>
+    }} className="mobile-full-width">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontSize: 18 }}>{mode.icon}</div>
         {mode.recommended && <Badge color={DARK.teal}>Recommended</Badge>}
@@ -1184,6 +1184,16 @@ export default function PHIWizardPage({ apiKey }) {
         ::-webkit-scrollbar-thumb:hover {
           background: ${DARK.accent};
         }
+
+        @media (max-width: 768px) {
+          .mobile-stack { flex-direction: column !important; }
+          .mobile-full-width { width: 100% !important; }
+          .mobile-grid-single { grid-template-columns: 1fr !important; }
+          .mobile-hide { display: none !important; }
+          .mobile-text-sm { font-size: 11px !important; }
+          .mobile-padding-sm { padding: 12px !important; }
+          .mobile-gap-sm { gap: 8px !important; }
+        }
       `}</style>
       <div style={{ background: theme === "dark" ? DARK.bg : "#f5f7fb", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", color: theme === "dark" ? DARK.text : "#0f172a" }}>
       <div style={{ borderBottom: `1px solid ${DARK.border}`, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
@@ -1205,7 +1215,7 @@ export default function PHIWizardPage({ apiKey }) {
         </div>
       </div>
 
-      <div style={{ padding: "24px 20px", maxWidth: 1280, margin: "0 auto" }}>
+      <div style={{ padding: "24px 20px", maxWidth: 1280, margin: "0 auto" }} className="mobile-padding-sm">
         <div style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 18, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.16)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <div>
@@ -1215,20 +1225,20 @@ export default function PHIWizardPage({ apiKey }) {
             <div style={{ color: DARK.dim, fontSize: 13 }}>Step {currentStep} of 6</div>
           </div>
 
-          <div style={{ marginTop: 18, display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ marginTop: 18, display: "flex", flexWrap: "wrap", gap: 10 }} className="mobile-grid-single">
             {STEP_TITLES.map((step, index) => {
               const active = index + 1 === currentStep;
               const completed = index + 1 < currentStep;
               return (
-                <div key={step} style={{ display: "flex", alignItems: "center", gap: 8, flex: "1 1 minmax(120px, 1fr)" }}>
-                  <div style={{ background: completed ? DARK.teal : active ? DARK.accent : DARK.card, color: completed || active ? "#fff" : DARK.muted, border: `1px solid ${completed ? DARK.teal : active ? DARK.accent : DARK.border}`, borderRadius: 999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13 }}>
+                <div key={step} style={{ display: "flex", alignItems: "center", gap: 8, flex: "1 1 minmax(120px, 1fr)" }} className="mobile-full-width">
+                  <div style={{ background: completed ? DARK.teal : active ? DARK.accent : DARK.card, color: completed || active ? "#fff" : DARK.muted, border: `1px solid ${completed ? DARK.teal : active ? DARK.accent : DARK.border}`, borderRadius: 999, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
                     {index + 1}
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 12, color: active ? DARK.text : DARK.muted, fontWeight: 600 }}>{step}</div>
                     <div style={{ fontSize: 10, color: DARK.muted }}>{index === 0 ? "Select purpose" : index === 1 ? "Review policy" : index === 2 ? "Choose strategy" : index === 3 ? "Input resource" : index === 4 ? "Preview" : "Results"}</div>
                   </div>
-                  {index < STEP_TITLES.length - 1 && <div style={{ color: DARK.muted, marginLeft: 8 }}>↓</div>}
+                  {index < STEP_TITLES.length - 1 && <div style={{ color: DARK.muted, marginLeft: 8 }} className="mobile-hide">↓</div>}
                 </div>
               );
             })}
@@ -1242,7 +1252,7 @@ export default function PHIWizardPage({ apiKey }) {
                   <div style={{ fontSize: 22, fontWeight: 700, color: DARK.text, marginTop: 4 }}>Select the privacy purpose for the workflow</div>
                   <div style={{ fontSize: 13, color: DARK.dim, marginTop: 6 }}>Choose a purpose card to set the active policy. No processing happens yet.</div>
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }} className="mobile-grid-single">
                   {PURPOSE_PRESETS.map(preset => (
                     <PurposeCard key={preset.name} preset={preset} selected={selectedPurpose === preset.name} onSelect={setSelectedPurpose} />
                   ))}
@@ -1310,13 +1320,13 @@ export default function PHIWizardPage({ apiKey }) {
                   <div style={{ fontSize: 11, color: DARK.muted, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Step 4 · Resource input</div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: DARK.text, marginTop: 4 }}>Provide the FHIR JSON resource</div>
                 </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} className="mobile-full-width">
                   {[
                     { id: "resource", label: "FHIR Resource" },
                     { id: "bundle", label: "FHIR Bundle" },
                     { id: "text", label: "Free Text Scan" },
                   ].map(tab => (
-                    <button key={tab.id} onClick={() => { setActiveTab(tab.id); setResult(null); setError(null); setJsonError(null); }} style={{ background: activeTab === tab.id ? DARK.accent : DARK.surface, color: activeTab === tab.id ? "#fff" : DARK.text, border: `1px solid ${activeTab === tab.id ? DARK.accent : DARK.border}`, borderRadius: 999, padding: "8px 12px", cursor: "pointer" }}>
+                    <button key={tab.id} onClick={() => { setActiveTab(tab.id); setResult(null); setError(null); setJsonError(null); }} style={{ background: activeTab === tab.id ? DARK.accent : DARK.surface, color: activeTab === tab.id ? "#fff" : DARK.text, border: `1px solid ${activeTab === tab.id ? DARK.accent : DARK.border}`, borderRadius: 999, padding: "8px 12px", cursor: "pointer", flex: 1 }} className="mobile-full-width">
                       {tab.label}
                     </button>
                   ))}
@@ -1324,17 +1334,17 @@ export default function PHIWizardPage({ apiKey }) {
 
                 {!isText ? (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button onClick={() => fileInputRef.current?.click()} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, cursor: "pointer" }}>Upload JSON</button>
-                        <button onClick={loadSample} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, cursor: "pointer" }}>Choose example</button>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }} className="mobile-stack">
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} className="mobile-full-width">
+                        <button onClick={() => fileInputRef.current?.click()} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, cursor: "pointer", flex: 1 }} className="mobile-full-width">Upload JSON</button>
+                        <button onClick={loadSample} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, cursor: "pointer", flex: 1 }} className="mobile-full-width">Choose example</button>
                       </div>
                       <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileUpload} style={{ display: "none" }} />
                       <div style={{ color: validationState.color, fontSize: 12, fontWeight: 600 }}>{validationState.label}</div>
                     </div>
 
                     <div style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 12, padding: 12 }}>
-                      <textarea value={isBundle ? bundleJson : inputJson} onChange={e => { if (isBundle) setBundleJson(e.target.value); else setInputJson(e.target.value); validateJson(e.target.value); setResult(null); }} style={{ width: "100%", background: DARK.card, border: `1px solid ${jsonError ? DARK.error : DARK.border}`, borderRadius: 10, padding: "12px 14px", color: DARK.text, fontFamily: "'JetBrains Mono', monospace", minHeight: 320, resize: "vertical" }} />
+                      <textarea value={isBundle ? bundleJson : inputJson} onChange={e => { if (isBundle) setBundleJson(e.target.value); else setInputJson(e.target.value); validateJson(e.target.value); setResult(null); }} style={{ width: "100%", background: DARK.card, border: `1px solid ${jsonError ? DARK.error : DARK.border}`, borderRadius: 10, padding: "12px 14px", color: DARK.text, fontFamily: "'JetBrains Mono', monospace", minHeight: 320, resize: "vertical", fontSize: "11px" }} />
                     </div>
                     <div style={{ color: DARK.dim, fontSize: 12 }}>{validationState.detail}</div>
                     <label style={{ display: "flex", alignItems: "center", gap: 8, color: DARK.dim, fontSize: 12 }}>
@@ -1355,7 +1365,7 @@ export default function PHIWizardPage({ apiKey }) {
                   <div style={{ fontSize: 22, fontWeight: 700, color: DARK.text, marginTop: 4 }}>Review the configured workflow before processing</div>
                   <div style={{ fontSize: 13, color: DARK.dim, marginTop: 6 }}>No processing occurs yet. This is a safe preview of the selected purpose, strategy, and data footprint.</div>
                 </div>
-                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }} className="mobile-grid-single">
                   <div style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 12, padding: 14 }}>
                     <div style={{ fontSize: 11, color: DARK.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Purpose</div>
                     <div style={{ color: DARK.text, fontWeight: 700, marginBottom: 6 }}>{selectedPurpose}</div>
@@ -1396,8 +1406,8 @@ export default function PHIWizardPage({ apiKey }) {
                   </div>
 
                   {/* ACTION BUTTONS */}
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button onClick={() => navigator.clipboard.writeText(JSON.stringify(result?.deidentified_resource || result?.deidentified_bundle || {}, null, 2))} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} className="mobile-stack mobile-full-width">
+                    <button onClick={() => navigator.clipboard.writeText(JSON.stringify(result?.deidentified_resource || result?.deidentified_bundle || {}, null, 2))} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }} className="mobile-full-width">
                       📋 Copy
                     </button>
                     <button onClick={() => {
@@ -1409,16 +1419,16 @@ export default function PHIWizardPage({ apiKey }) {
                       link.download = "deidentified-resource.json";
                       link.click();
                       URL.revokeObjectURL(url);
-                    }} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                    }} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }} className="mobile-full-width">
                       💾 Download JSON
                     </button>
-                    <button onClick={() => setCurrentStep(5)} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                    <button onClick={() => setCurrentStep(5)} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "8px 12px", color: DARK.text, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }} className="mobile-full-width">
                       🔄 Run Again
                     </button>
-                    <button onClick={() => setActiveAuditTab("audit")} style={{ background: DARK.accent + "22", border: `1px solid ${DARK.accent}`, color: DARK.accent, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                    <button onClick={() => setActiveAuditTab("audit")} style={{ background: DARK.accent + "22", border: `1px solid ${DARK.accent}`, color: DARK.accent, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }} className="mobile-full-width">
                       🔍 View Audit
                     </button>
-                    <button onClick={() => downloadAuditPdf(result, selectedPurpose, mode, processingMeta, policyPreset)} style={{ background: DARK.teal + "22", border: `1px solid ${DARK.teal}`, color: DARK.teal, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                    <button onClick={() => downloadAuditPdf(result, selectedPurpose, mode, processingMeta, policyPreset)} style={{ background: DARK.teal + "22", border: `1px solid ${DARK.teal}`, color: DARK.teal, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }} className="mobile-full-width">
                       📄 Download Audit PDF
                     </button>
                   </div>
@@ -1431,7 +1441,7 @@ export default function PHIWizardPage({ apiKey }) {
                 ) : (
                   <>
                     {/* 2. TOP SUMMARY ROW */}
-                    <div style={{ background: DARK.card, border: `1px solid ${DARK.border}`, borderRadius: 12, padding: "12px 18px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, alignItems: "center" }}>
+                    <div style={{ background: DARK.card, border: `1px solid ${DARK.border}`, borderRadius: 12, padding: "12px 18px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, alignItems: "center" }} className="mobile-grid-single">
                       <div>
                         <div style={{ fontSize: 10, color: DARK.muted, textTransform: "uppercase", fontWeight: 700 }}>Purpose</div>
                         <div style={{ fontSize: 13, color: DARK.accent, fontWeight: 700, marginTop: 2 }}>{selectedPurpose}</div>
@@ -1465,7 +1475,7 @@ export default function PHIWizardPage({ apiKey }) {
                     </div>
 
                     {/* 3. NAVIGATION TABS */}
-                    <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${DARK.border}`, paddingBottom: 10 }}>
+                    <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${DARK.border}`, paddingBottom: 10, flexWrap: "wrap" }} className="mobile-gap-sm">
                       {[
                         { id: "overview", label: "Overview", icon: "📊" },
                         { id: "compare", label: "Compare", icon: "⚖️" },
@@ -1488,7 +1498,10 @@ export default function PHIWizardPage({ apiKey }) {
                             alignItems: "center",
                             gap: 6,
                             transition: "all 0.15s",
+                            flex: 1,
+                            justifyContent: "center",
                           }}
+                          className="mobile-text-sm"
                         >
                           <span>{tab.icon}</span>
                           <span>{tab.label}</span>
@@ -1508,7 +1521,7 @@ export default function PHIWizardPage({ apiKey }) {
                             <Badge color={DARK.success}>Verified Complete</Badge>
                           </div>
 
-                          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", background: DARK.card, border: `1px solid ${DARK.border}`, borderRadius: 10, padding: 14 }}>
+                          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", background: DARK.card, border: `1px solid ${DARK.border}`, borderRadius: 10, padding: 14 }} className="mobile-grid-single">
                             <div>
                               <div style={{ fontSize: 11, color: DARK.muted }}>Purpose</div>
                               <div style={{ fontSize: 13, fontWeight: 700, color: DARK.accent, marginTop: 2 }}>{selectedPurpose}</div>
@@ -1667,16 +1680,16 @@ export default function PHIWizardPage({ apiKey }) {
             )}
           </div>
 
-          <div style={{ marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-            <button onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} disabled={currentStep === 1} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "10px 16px", color: DARK.text, cursor: currentStep === 1 ? "not-allowed" : "pointer", opacity: currentStep === 1 ? 0.6 : 1 }}>
+          <div style={{ marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }} className="mobile-stack mobile-full-width">
+            <button onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} disabled={currentStep === 1} style={{ background: DARK.surface, border: `1px solid ${DARK.border}`, borderRadius: 8, padding: "10px 16px", color: DARK.text, cursor: currentStep === 1 ? "not-allowed" : "pointer", opacity: currentStep === 1 ? 0.6 : 1, flex: 1 }} className="mobile-full-width">
               Back
             </button>
             {currentStep < 6 ? (
-              <button onClick={() => { if (currentStep === 5) { run(); } else { setCurrentStep(Math.min(6, currentStep + 1)); } }} disabled={loading || (currentStep === 4 && !isText && (!inputJson.trim() || !!jsonError))} style={{ background: loading ? DARK.muted : DARK.accent, color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", cursor: loading ? "wait" : "pointer" }}>
+              <button onClick={() => { if (currentStep === 5) { run(); } else { setCurrentStep(Math.min(6, currentStep + 1)); } }} disabled={loading || (currentStep === 4 && !isText && (!inputJson.trim() || !!jsonError))} style={{ background: loading ? DARK.muted : DARK.accent, color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", cursor: loading ? "wait" : "pointer", flex: 1 }} className="mobile-full-width">
                 {currentStep === 5 ? (loading ? "Running..." : "Run De-identification") : "Next"}
               </button>
             ) : (
-              <button onClick={() => setCurrentStep(1)} style={{ background: DARK.teal, color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", cursor: "pointer" }}>Start over</button>
+              <button onClick={() => setCurrentStep(1)} style={{ background: DARK.teal, color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", cursor: "pointer", flex: 1 }} className="mobile-full-width">Start over</button>
             )}
           </div>
 

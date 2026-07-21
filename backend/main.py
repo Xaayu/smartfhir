@@ -150,6 +150,9 @@ EXEMPT_PATHS = {
     "/phi/modes",
     "/phi/policies/presets",
     "/phi/policies/apply",
+    "/phi/deidentify",
+    "/phi/deidentify-bundle",
+    "/phi/scan-text",
 }
 
 @app.middleware("http")
